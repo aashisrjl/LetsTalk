@@ -15,9 +15,8 @@ const featuredRooms = [
     maxParticipants: 20,
     isLive: true,
     type: "video" as const,
-    description: "Practice everyday English conversations",
-    host: "Sarah Johnson",
-    tags: ["beginner", "conversation"],
+    difficulty: "Beginner",
+    topic: "Daily Life"
   },
   {
     id: 2,
@@ -26,10 +25,9 @@ const featuredRooms = [
     participants: 8,
     maxParticipants: 15,
     isLive: true,
-    type: "audio" as const,
-    description: "Learn Spanish with native speakers",
-    host: "Carlos Rodriguez",
-    tags: ["intermediate", "grammar"],
+    type: "voice" as const,
+    difficulty: "Intermediate",
+    topic: "Grammar"
   },
   {
     id: 3,
@@ -39,9 +37,8 @@ const featuredRooms = [
     maxParticipants: 10,
     isLive: false,
     type: "text" as const,
-    description: "Discuss French culture and traditions",
-    host: "Marie Dubois",
-    tags: ["culture", "advanced"],
+    difficulty: "Advanced",
+    topic: "Culture"
   },
   {
     id: 4,
@@ -51,9 +48,8 @@ const featuredRooms = [
     maxParticipants: 25,
     isLive: true,
     type: "video" as const,
-    description: "Learn Japanese through anime discussions",
-    host: "Takeshi Yamamoto",
-    tags: ["fun", "pop-culture"],
+    difficulty: "Intermediate",
+    topic: "Pop Culture"
   },
 ];
 
@@ -118,7 +114,17 @@ export function Dashboard() {
             </div>
             <div className="grid sm:grid-cols-2 gap-6">
               {featuredRooms.map((room) => (
-                <RoomCard key={room.id} room={room} />
+                <RoomCard 
+                  key={room.id}
+                  title={room.title}
+                  language={room.language}
+                  participants={room.participants}
+                  maxParticipants={room.maxParticipants}
+                  isLive={room.isLive}
+                  type={room.type}
+                  difficulty={room.difficulty}
+                  topic={room.topic}
+                />
               ))}
             </div>
           </section>
