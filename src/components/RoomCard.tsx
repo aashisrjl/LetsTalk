@@ -2,7 +2,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Video, Mic, MessageSquare, Clock } from "lucide-react";
 
 interface RoomCardProps {
@@ -11,7 +10,6 @@ interface RoomCardProps {
   participants: number;
   maxParticipants: number;
   isLive: boolean;
-  type: "video" | "voice" | "text";
   difficulty?: string;
   topic?: string;
 }
@@ -22,32 +20,9 @@ export function RoomCard({
   participants, 
   maxParticipants, 
   isLive, 
-  type, 
   difficulty, 
   topic 
 }: RoomCardProps) {
-  const getTypeIcon = () => {
-    switch (type) {
-      case "video":
-        return <Video className="h-4 w-4" />;
-      case "voice":
-        return <Mic className="h-4 w-4" />;
-      case "text":
-        return <MessageSquare className="h-4 w-4" />;
-    }
-  };
-
-  const getTypeColor = () => {
-    switch (type) {
-      case "video":
-        return "bg-green-500";
-      case "voice":
-        return "bg-blue-500";
-      case "text":
-        return "bg-purple-500";
-    }
-  };
-
   return (
     <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group">
       <CardHeader className="pb-3">
@@ -71,8 +46,16 @@ export function RoomCard({
             </div>
             <CardTitle className="text-lg leading-tight">{title}</CardTitle>
           </div>
-          <div className={`p-2 rounded-lg ${getTypeColor()} text-white`}>
-            {getTypeIcon()}
+          <div className="flex gap-1">
+            <div className="p-1.5 rounded-md bg-green-100 text-green-600">
+              <Video className="h-3 w-3" />
+            </div>
+            <div className="p-1.5 rounded-md bg-blue-100 text-blue-600">
+              <Mic className="h-3 w-3" />
+            </div>
+            <div className="p-1.5 rounded-md bg-purple-100 text-purple-600">
+              <MessageSquare className="h-3 w-3" />
+            </div>
           </div>
         </div>
         {(difficulty || topic) && (

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -30,7 +31,6 @@ const Rooms = () => {
       participants: 12,
       maxParticipants: 20,
       isLive: true,
-      type: "voice" as const,
       difficulty: "Intermediate",
       topic: "Daily Life"
     },
@@ -41,7 +41,6 @@ const Rooms = () => {
       participants: 8,
       maxParticipants: 15,
       isLive: true,
-      type: "video" as const,
       difficulty: "Beginner",
       topic: "Grammar"
     },
@@ -52,7 +51,6 @@ const Rooms = () => {
       participants: 5,
       maxParticipants: 10,
       isLive: false,
-      type: "text" as const,
       difficulty: "Advanced",
       topic: "Culture"
     },
@@ -63,7 +61,6 @@ const Rooms = () => {
       participants: 15,
       maxParticipants: 25,
       isLive: true,
-      type: "voice" as const,
       difficulty: "Beginner",
       topic: "Pronunciation"
     }
@@ -92,7 +89,7 @@ const Rooms = () => {
               <div className="flex flex-col gap-4">
                 <h1 className="text-3xl font-bold">Language Rooms</h1>
                 <p className="text-muted-foreground">
-                  Join conversations and practice languages with speakers from around the world
+                  Join conversations and practice languages with speakers from around the world. All rooms support video, voice, and text chat.
                 </p>
               </div>
 
@@ -144,7 +141,6 @@ const Rooms = () => {
                     participants={room.participants}
                     maxParticipants={room.maxParticipants}
                     isLive={room.isLive}
-                    type={room.type}
                     difficulty={room.difficulty}
                     topic={room.topic}
                   />

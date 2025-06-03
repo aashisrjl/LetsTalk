@@ -1,4 +1,3 @@
-
 import { RoomCard } from "@/components/RoomCard";
 import { UserProfile } from "@/components/UserProfile";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +13,6 @@ const featuredRooms = [
     participants: 12,
     maxParticipants: 20,
     isLive: true,
-    type: "video" as const,
     difficulty: "Beginner",
     topic: "Daily Life"
   },
@@ -25,7 +23,6 @@ const featuredRooms = [
     participants: 8,
     maxParticipants: 15,
     isLive: true,
-    type: "voice" as const,
     difficulty: "Intermediate",
     topic: "Grammar"
   },
@@ -36,7 +33,6 @@ const featuredRooms = [
     participants: 5,
     maxParticipants: 10,
     isLive: false,
-    type: "text" as const,
     difficulty: "Advanced",
     topic: "Culture"
   },
@@ -47,7 +43,6 @@ const featuredRooms = [
     participants: 15,
     maxParticipants: 25,
     isLive: true,
-    type: "video" as const,
     difficulty: "Intermediate",
     topic: "Pop Culture"
   },
@@ -121,7 +116,6 @@ export function Dashboard() {
                   participants={room.participants}
                   maxParticipants={room.maxParticipants}
                   isLive={room.isLive}
-                  type={room.type}
                   difficulty={room.difficulty}
                   topic={room.topic}
                 />

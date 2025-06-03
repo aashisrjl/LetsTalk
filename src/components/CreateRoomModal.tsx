@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Video, Mic, MessageSquare, Users, Globe, Lock, X } from "lucide-react";
+import { Users, Globe, Lock, X } from "lucide-react";
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -20,18 +20,11 @@ const languages = [
   "Chinese", "Japanese", "Korean", "Arabic", "Russian", "Dutch"
 ];
 
-const roomTypes = [
-  { value: "video", label: "Video Chat", icon: Video, description: "Face-to-face conversation" },
-  { value: "audio", label: "Audio Only", icon: Mic, description: "Voice conversation" },
-  { value: "text", label: "Text Chat", icon: MessageSquare, description: "Written conversation" },
-];
-
 export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const [roomData, setRoomData] = useState({
     title: "",
     description: "",
     language: "",
-    type: "video",
     maxParticipants: "10",
     isPrivate: false,
     tags: [] as string[],
@@ -72,7 +65,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
             Create New Room
           </DialogTitle>
           <DialogDescription>
-            Set up a new language practice room for the community.
+            Set up a new language practice room. Participants will have access to video, voice, and text chat.
           </DialogDescription>
         </DialogHeader>
 
@@ -115,37 +108,6 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
             </div>
           </div>
 
-          {/* Room Type */}
-          <div>
-            <Label className="text-base font-medium">Room Type</Label>
-            <div className="grid grid-cols-1 gap-3 mt-2">
-              {roomTypes.map((type) => {
-                const Icon = type.icon;
-                return (
-                  <div
-                    key={type.value}
-                    className={`flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                      roomData.type === type.value 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:bg-muted/50"
-                    }`}
-                    onClick={() => setRoomData(prev => ({ ...prev, type: type.value }))}
-                  >
-                    <div className={`p-2 rounded-lg ${
-                      roomData.type === type.value ? "bg-primary text-primary-foreground" : "bg-muted"
-                    }`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{type.label}</p>
-                      <p className="text-sm text-muted-foreground">{type.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Settings */}
           <div className="space-y-4">
             <div>
@@ -182,6 +144,14 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Communication Features Info */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-2">Available Features</h4>
+            <p className="text-sm text-muted-foreground">
+              All rooms include video calls, voice chat, and text messaging. Participants can toggle between modes during the session.
+            </p>
           </div>
 
           {/* Tags */}
