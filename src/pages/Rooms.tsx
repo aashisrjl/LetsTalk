@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -146,6 +145,8 @@ const Rooms = () => {
                     maxParticipants={room.maxParticipants}
                     isLive={room.isLive}
                     type={room.type}
+                    difficulty={room.difficulty}
+                    topic={room.topic}
                   />
                 ))}
               </div>

@@ -5,29 +5,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Video, Mic, MessageSquare, Clock } from "lucide-react";
 
-interface Room {
-  id: number;
+interface RoomCardProps {
   title: string;
   language: string;
   participants: number;
   maxParticipants: number;
   isLive: boolean;
-  type: "video" | "audio" | "text";
-  description: string;
-  host: string;
-  tags: string[];
+  type: "video" | "voice" | "text";
+  difficulty?: string;
+  topic?: string;
 }
 
-interface RoomCardProps {
-  room: Room;
-}
-
-export function RoomCard({ room }: RoomCardProps) {
+export function RoomCard({ 
+  title, 
+  language, 
+  participants, 
+  maxParticipants, 
+  isLive, 
+  type, 
+  difficulty, 
+  topic 
+}: RoomCardProps) {
   const getTypeIcon = () => {
-    switch (room.type) {
+    switch (type) {
       case "video":
         return <Video className="h-4 w-4" />;
-      case "audio":
+      case "voice":
         return <Mic className="h-4 w-4" />;
       case "text":
         return <MessageSquare className="h-4 w-4" />;
@@ -35,10 +38,10 @@ export function RoomCard({ room }: RoomCardProps) {
   };
 
   const getTypeColor = () => {
-    switch (room.type) {
+    switch (type) {
       case "video":
         return "bg-green-500";
-      case "audio":
+      case "voice":
         return "bg-blue-500";
       case "text":
         return "bg-purple-500";
@@ -52,63 +55,48 @@ export function RoomCard({ room }: RoomCardProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline" className="text-xs">
-                {room.language}
+                {language}
               </Badge>
-              {room.isLive && (
+              {isLive && (
                 <Badge className="bg-red-500 hover:bg-red-600 text-xs animate-pulse">
                   LIVE
                 </Badge>
               )}
-              {!room.isLive && (
+              {!isLive && (
                 <Badge variant="secondary" className="text-xs">
                   <Clock className="h-3 w-3 mr-1" />
                   Scheduled
                 </Badge>
               )}
             </div>
-            <CardTitle className="text-lg leading-tight">{room.title}</CardTitle>
+            <CardTitle className="text-lg leading-tight">{title}</CardTitle>
           </div>
           <div className={`p-2 rounded-lg ${getTypeColor()} text-white`}>
             {getTypeIcon()}
           </div>
         </div>
-        <CardDescription className="text-sm">
-          {room.description}
-        </CardDescription>
+        {(difficulty || topic) && (
+          <CardDescription className="text-sm">
+            {difficulty && `${difficulty} • `}{topic}
+          </CardDescription>
+        )}
       </CardHeader>
 
       <CardContent className="pb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
-            <span>{room.participants}/{room.maxParticipants}</span>
+            <span>{participants}/{maxParticipants}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src="/placeholder.svg" alt={room.host} />
-              <AvatarFallback className="text-xs">
-                {room.host.split(" ").map(n => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm text-muted-foreground">{room.host}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {room.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
         </div>
       </CardContent>
 
       <CardFooter>
         <Button 
           className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-          variant={room.isLive ? "default" : "outline"}
+          variant={isLive ? "default" : "outline"}
         >
-          {room.isLive ? "Join Now" : "Schedule"}
+          {isLive ? "Join Now" : "Schedule"}
         </Button>
       </CardFooter>
     </Card>
