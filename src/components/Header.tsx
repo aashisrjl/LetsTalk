@@ -35,9 +35,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">L</span>
+              <span className="text-white font-bold text-sm">FT</span>
             </div>
-            <h1 className="text-xl font-bold hidden sm:block">LangConnect</h1>
+            <h1 className="text-xl font-bold hidden sm:block">FreeTalk</h1>
           </div>
         </div>
 
