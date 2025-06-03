@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { NotificationModal } from "@/components/NotificationModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { Bell, MessageSquare, UserPlus, Calendar, Settings } from "lucide-react"
 
 const Notifications = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -70,6 +72,14 @@ const Notifications = () => {
     setNotifications(prev => 
       prev.map(notif => ({ ...notif, read: true }))
     );
+  };
+
+  const handleNotificationClick = (notification: any) => {
+    setSelectedNotification(notification);
+    setIsModalOpen(true);
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -154,7 +164,7 @@ const Notifications = () => {
                         className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                           !notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
                         }`}
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
@@ -194,6 +204,13 @@ const Notifications = () => {
             </div>
           </main>
         </div>
+
+        <NotificationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          notification={selectedNotification}
+          onMarkAsRead={markAsRead}
+        />
       </div>
     </ThemeProvider>
   );
