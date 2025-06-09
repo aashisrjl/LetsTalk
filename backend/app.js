@@ -1,17 +1,18 @@
+// ✅ Load environment variables first
+require('dotenv').config();
 
 const express = require('express');
-const session = require('express-session');
-const passport = require('./services/passport');
+const passport = require('./services/passport'); // ✅ load AFTER dotenv
 const app = express();
 const port = process.env.PORT || 3000;
 
-//env configuration
-const env = require('dotenv');
-env.config();
+// Database connection
+const connectToDatabase = require('./database/connection');
+connectToDatabase();
 
-//cors origin configuration
+// CORS configuration
 const cors = require('cors');
-corsOptions = {
+const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
@@ -20,56 +21,39 @@ corsOptions = {
 };
 app.use(cors(corsOptions));
 
-//body parser configuration
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
+// Body parser configuration
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
-app.use(session({
-    secret: process.env.JWT_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
-
-// Passport middleware
+// Optional (if using sessions and login)
 app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.session()); // only needed if you're using sessions
 
+// Home route
 app.get('/', (req, res) => {
     res.send('Welcome to the backend server!');
 });
 
-// Import routes
+// Routes
 const userRoutes = require('./routes/user.routes');
-
-// Use routes
 app.use('/', userRoutes);
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });
 
-// 404 Not Found middleware
+// 404 handler
 app.use((req, res) => {
     res.status(404).send('Not Found');
 });
-
-// Import mongoose for MongoDB connection
-const mongoose = require('mongoose');
-const dbURI = process.env.mongoURI ;
-mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.error('MongoDB connection error:', err));
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
 
-// Export the app for testing purposes
 module.exports = app;

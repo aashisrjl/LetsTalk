@@ -13,6 +13,7 @@ const Index = () => {
   const isAuthenticated = true; // Changed back to true to show dashboard content
 
   return (
+    <div className="container">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-2">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
@@ -27,6 +28,7 @@ const Index = () => {
           </main>
         </div>
       </div>
+    </div>
     </div>
   );
 };

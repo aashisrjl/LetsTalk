@@ -60,7 +60,7 @@ const Settings = () => {
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="container min-h-screen bg-background text-foreground">
         <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         
         <div className="flex">

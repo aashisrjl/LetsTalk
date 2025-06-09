@@ -1,21 +1,46 @@
+const jwt = require("jsonwebtoken");
+const {promisify} = require("util");
+const User = require("../database/models/user.model");
 
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  
-  res.status(401).json({
-    success: false,
-    message: 'Authentication required'
-  });
-};
 
-const optionalAuth = (req, res, next) => {
-  // This middleware allows both authenticated and non-authenticated requests
-  next();
-};
+exports.isAuthenticated = async(req,res,next)=>{
+    console.log("Auth middleware is called")
+    try {
+        const token = req.cookies.token;
+    if(!token){
+        return res.status(401).json({
+            success:false,
+            message:"can't find token"
+        });
+    }
+    const decoded = await promisify(jwt.verify)(token,process.env.JWT_SECRET)
+    console.log("Decoded id is:",decoded)
+    if(!decoded){
+        console.log("can't decode")
+        return
+    };
 
-module.exports = {
-  isAuthenticated,
-  optionalAuth
-};
+    const decodedId = decoded.id;
+    console.log("DecodedId is",decodedId)
+   const user =  await User.findById({_id:decodedId})
+    console.log("User is:",user.email)
+    if(!user){
+        return res.status(401).json({
+            success:false,
+            message:"You are not logged in" 
+        });
+    }
+    
+    req.user = user;
+    req.userId = user._id;
+    next();
+        
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            message: "server error in iaAuthentication"
+        })
+        
+    }
+    
+}

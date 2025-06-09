@@ -1,51 +1,59 @@
 
 const express = require('express');
 const passport = require('../services/passport');
+const generateToken = require('../utils/jwt');
 const router = express.Router();
 
-// Google authentication routes
-router.get('/auth/google', 
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+// Google callback
+router.get('/auth/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],session: false}
+  )
 );
-
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/auth' }),
+  passport.authenticate('google', { failureRedirect: '/auth',session: false }),
   (req, res) => {
-    // Successful authentication, redirect to frontend
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/?token=${req.user.id}`);
+    const token = generateToken(req.user.id);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
   }
 );
 
-// Facebook authentication routes
+
 router.get('/auth/facebook',
-  passport.authenticate('facebook', { scope: ['email'] })
+  passport.authenticate('facebook', { scope: ['email'],session: false })
 );
 
 router.get('/auth/facebook/callback',
-  passport.authenticate('facebook', { failureRedirect: '/auth' }),
+  passport.authenticate('facebook', { failureRedirect: '/auth',session: false }),
   (req, res) => {
-    // Successful authentication, redirect to frontend
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/?token=${req.user.id}`);
+    const token = generateToken(req.user.id);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
   }
 );
 
-// Logout route
-router.post('/auth/logout', (req, res) => {
+
+// logout route
+router.get('/logout', (req, res) => {
   req.logout((err) => {
     if (err) {
       return res.status(500).json({ message: 'Logout failed' });
     }
-    res.json({ message: 'Logged out successfully' });
+    res.clearCookie('token'); // Clear the token cookie
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
   });
 });
 
-// Get current user
-router.get('/auth/user', (req, res) => {
-  if (req.user) {
-    res.json(req.user);
-  } else {
-    res.status(401).json({ message: 'Not authenticated' });
-  }
-});
 
 module.exports = router;
