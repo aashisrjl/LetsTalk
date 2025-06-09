@@ -1,19 +1,22 @@
 const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
+  roomId: { type: String, required: true, unique: true }, // e.g., CR947
+
   title: { type: String, required: true },
+  topic: { type: String, default: "Let's talk" },
   description: { type: String },
 
-  language: { type: String, required: true }, // e.g., English, Spanish, Japanese
+  language: { type: String, required: true },
 
   maxParticipants: { type: Number, default: 10 },
 
   private: { type: Boolean, default: false },
 
-  tags: [{ type: String }], // e.g., ['Grammar', 'Beginner', 'Culture']
+  tags: [{ type: String }],
 
-  // This room is always live
   isLive: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },
 
   supports: {
     video: { type: Boolean, default: true },
@@ -27,5 +30,9 @@ const roomSchema = new mongoose.Schema({
 
   createdAt: { type: Date, default: Date.now }
 });
+
+// Indexes (optional for filtering)
+roomSchema.index({ language: 1 });
+roomSchema.index({ tags: 1 });
 
 module.exports = mongoose.model('Room', roomSchema);

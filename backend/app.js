@@ -2,9 +2,21 @@
 require('dotenv').config();
 
 const express = require('express');
-const passport = require('./services/passport'); // ✅ load AFTER dotenv
+const http = require('http');
+const server = http.createServer(express());
+const passport = require('./services/passport'); 
+const socketIO = require('socket.io');
 const app = express();
 const port = process.env.PORT || 3000;
+const io = socketIO(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    credentials: true,
+  },
+});
+
+require('./socket/roomSocket')(io); // Socket handlers
+
 
 // Database connection
 const connectToDatabase = require('./database/connection');
@@ -13,7 +25,7 @@ connectToDatabase();
 // CORS configuration
 const cors = require('cors');
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
+    origin: process.env.FRONTEND_URL || 'http://localhost:8080', 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     preflightContinue: false,
@@ -39,6 +51,8 @@ app.get('/', (req, res) => {
 
 // Routes
 const userRoutes = require('./routes/user.routes');
+const roomRoutes = require('./routes/room.routes');
+app.use('/', roomRoutes);
 app.use('/', userRoutes);
 
 // Error handler
