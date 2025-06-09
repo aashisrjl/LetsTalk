@@ -66,40 +66,40 @@ const Settings = () => {
         <div className="flex">
           <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
           
-          <main className="flex-1 p-4 lg:p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
+          <main className="flex-1 p-2 sm:p-4 lg:p-6">
+            <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
               {/* Page Header */}
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                  <SettingsIcon className="h-8 w-8" />
+              <div className="px-2 sm:px-0">
+                <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                  <SettingsIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                   Settings
                 </h1>
-                <p className="text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                   Manage your account preferences and app settings
                 </p>
               </div>
 
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-                  <TabsTrigger value="profile">Profile</TabsTrigger>
-                  <TabsTrigger value="notifications">Notifications</TabsTrigger>
-                  <TabsTrigger value="privacy">Privacy</TabsTrigger>
-                  <TabsTrigger value="audio">Audio/Video</TabsTrigger>
-                  <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto p-1">
+                  <TabsTrigger value="profile" className="text-xs sm:text-sm py-2">Profile</TabsTrigger>
+                  <TabsTrigger value="notifications" className="text-xs sm:text-sm py-2">Notifications</TabsTrigger>
+                  <TabsTrigger value="privacy" className="text-xs sm:text-sm py-2">Privacy</TabsTrigger>
+                  <TabsTrigger value="audio" className="text-xs sm:text-sm py-2">Audio/Video</TabsTrigger>
+                  <TabsTrigger value="appearance" className="text-xs sm:text-sm py-2">Appearance</TabsTrigger>
                 </TabsList>
 
                 {/* Profile Settings */}
-                <TabsContent value="profile" className="space-y-6">
+                <TabsContent value="profile" className="space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5" />
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
                         Profile Information
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="displayName">Display Name</Label>
+                        <Label htmlFor="displayName" className="text-sm">Display Name</Label>
                         <Input
                           id="displayName"
                           value={profileSettings.displayName}
@@ -107,11 +107,12 @@ const Settings = () => {
                             ...prev,
                             displayName: e.target.value
                           }))}
+                          className="text-sm"
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="bio">Bio</Label>
+                        <Label htmlFor="bio" className="text-sm">Bio</Label>
                         <Textarea
                           id="bio"
                           value={profileSettings.bio}
@@ -119,12 +120,12 @@ const Settings = () => {
                             ...prev,
                             bio: e.target.value
                           }))}
-                          className="min-h-[100px]"
+                          className="min-h-[80px] sm:min-h-[100px] text-sm"
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
+                        <Label htmlFor="location" className="text-sm">Location</Label>
                         <Input
                           id="location"
                           value={profileSettings.location}
@@ -132,51 +133,52 @@ const Settings = () => {
                             ...prev,
                             location: e.target.value
                           }))}
+                          className="text-sm"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Native Languages</Label>
+                        <Label className="text-sm">Native Languages</Label>
                         <div className="flex flex-wrap gap-2">
                           {profileSettings.nativeLanguages.map((lang, index) => (
-                            <Badge key={index} className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                            <Badge key={index} className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
                               {lang}
                             </Badge>
                           ))}
-                          <Button variant="outline" size="sm">Add Language</Button>
+                          <Button variant="outline" size="sm" className="text-xs h-6">Add Language</Button>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Learning Languages</Label>
+                        <Label className="text-sm">Learning Languages</Label>
                         <div className="flex flex-wrap gap-2">
                           {profileSettings.learningLanguages.map((lang, index) => (
-                            <Badge key={index} variant="outline">
+                            <Badge key={index} variant="outline" className="text-xs">
                               {lang}
                             </Badge>
                           ))}
-                          <Button variant="outline" size="sm">Add Language</Button>
+                          <Button variant="outline" size="sm" className="text-xs h-6">Add Language</Button>
                         </div>
                       </div>
 
-                      <Button>Save Profile Changes</Button>
+                      <Button className="w-full sm:w-auto">Save Profile Changes</Button>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 {/* Notification Settings */}
-                <TabsContent value="notifications" className="space-y-6">
+                <TabsContent value="notifications" className="space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Bell className="h-5 w-5" />
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                         Notification Preferences
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {Object.entries(notificationSettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <Label htmlFor={key} className="capitalize">
+                        <div key={key} className="flex items-center justify-between py-2">
+                          <Label htmlFor={key} className="capitalize text-sm sm:text-base flex-1 pr-4">
                             {key.replace(/([A-Z])/g, ' $1').trim()}
                           </Label>
                           <Switch
@@ -196,18 +198,18 @@ const Settings = () => {
                 </TabsContent>
 
                 {/* Privacy Settings */}
-                <TabsContent value="privacy" className="space-y-6">
+                <TabsContent value="privacy" className="space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5" />
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                         Privacy & Security
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {Object.entries(privacySettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <Label htmlFor={key} className="capitalize">
+                        <div key={key} className="flex items-center justify-between py-2">
+                          <Label htmlFor={key} className="capitalize text-sm sm:text-base flex-1 pr-4">
                             {key.replace(/([A-Z])/g, ' $1').trim()}
                           </Label>
                           {typeof value === 'boolean' ? (
@@ -222,7 +224,7 @@ const Settings = () => {
                               }
                             />
                           ) : (
-                            <Badge variant="secondary">{value}</Badge>
+                            <Badge variant="secondary" className="text-xs">{value}</Badge>
                           )}
                         </div>
                       ))}
@@ -238,19 +240,19 @@ const Settings = () => {
                 </TabsContent>
 
                 {/* Audio/Video Settings */}
-                <TabsContent value="audio" className="space-y-6">
+                <TabsContent value="audio" className="space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Volume2 className="h-5 w-5" />
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         Audio & Video Settings
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2 flex-1 pr-4">
                           <Volume2 className="h-4 w-4" />
-                          <Label>Microphone Access</Label>
+                          <Label className="text-sm sm:text-base">Microphone Access</Label>
                         </div>
                         <Switch
                           checked={audioSettings.microphoneEnabled}
@@ -263,10 +265,10 @@ const Settings = () => {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2 flex-1 pr-4">
                           <Camera className="h-4 w-4" />
-                          <Label>Camera Access</Label>
+                          <Label className="text-sm sm:text-base">Camera Access</Label>
                         </div>
                         <Switch
                           checked={audioSettings.cameraEnabled}
@@ -279,8 +281,8 @@ const Settings = () => {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <Label>Echo Cancellation</Label>
+                      <div className="flex items-center justify-between py-2">
+                        <Label className="text-sm sm:text-base flex-1 pr-4">Echo Cancellation</Label>
                         <Switch
                           checked={audioSettings.echoCancellation}
                           onCheckedChange={(checked) => 
@@ -292,8 +294,8 @@ const Settings = () => {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <Label>Noise Suppression</Label>
+                      <div className="flex items-center justify-between py-2">
+                        <Label className="text-sm sm:text-base flex-1 pr-4">Noise Suppression</Label>
                         <Switch
                           checked={audioSettings.noiseSuppression}
                           onCheckedChange={(checked) => 
@@ -305,40 +307,40 @@ const Settings = () => {
                         />
                       </div>
 
-                      <Button>Test Audio/Video</Button>
+                      <Button className="w-full sm:w-auto">Test Audio/Video</Button>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 {/* Appearance Settings */}
-                <TabsContent value="appearance" className="space-y-6">
+                <TabsContent value="appearance" className="space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Palette className="h-5 w-5" />
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Palette className="h-4 w-4 sm:h-5 sm:w-5" />
                         Appearance & Language
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label>Theme</Label>
+                      <div className="flex items-center justify-between py-2">
+                        <Label className="text-sm sm:text-base">Theme</Label>
                         <ThemeToggle />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2 flex-1 pr-4">
                           <Globe className="h-4 w-4" />
-                          <Label>App Language</Label>
+                          <Label className="text-sm sm:text-base">App Language</Label>
                         </div>
-                        <Badge variant="secondary">English</Badge>
+                        <Badge variant="secondary" className="text-xs">English</Badge>
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Font Size</Label>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">Small</Button>
-                          <Button variant="secondary" size="sm">Medium</Button>
-                          <Button variant="outline" size="sm">Large</Button>
+                        <Label className="text-sm">Font Size</Label>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button variant="outline" size="sm" className="text-xs">Small</Button>
+                          <Button variant="secondary" size="sm" className="text-xs">Medium</Button>
+                          <Button variant="outline" size="sm" className="text-xs">Large</Button>
                         </div>
                       </div>
                     </CardContent>
