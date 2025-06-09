@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Facebook, Google } from "lucide-react";
+import { Facebook, Mail } from "lucide-react";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState<'google' | 'facebook' | null>(null);
@@ -72,7 +72,7 @@ const Auth = () => {
                 {isLoading === 'google' ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 ) : (
-                  <Google className="h-5 w-5" />
+                  <Mail className="h-5 w-5" />
                 )}
                 <span className="ml-3">Continue with Google</span>
               </Button>
