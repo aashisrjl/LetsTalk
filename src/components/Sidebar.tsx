@@ -40,11 +40,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       
       {/* Sidebar */}
       <aside className={cn(
-        "sticky top-16 left-0 z-50 h-[calc(100vh-4rem)] w-64 transform border-r bg-background transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 overflow-hidden",
-        "lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]",
-        isOpen ? "translate-x-0 fixed" : "-translate-x-full"
+        "fixed top-[4.5rem] left-0 z-50 h-[calc(100vh-4.5rem)] w-64 transform border-r bg-background transition-transform duration-200 ease-in-out lg:sticky lg:top-[4.5rem] lg:translate-x-0 lg:h-[calc(100vh-4.5rem)]",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="flex h-full flex-col overflow-hidden">
+        <div className="flex h-full flex-col">
           <div className="flex items-center justify-between p-4 lg:hidden border-b">
             <h2 className="text-lg font-semibold">Navigation</h2>
             <Button variant="ghost" size="icon" onClick={onClose}>
@@ -52,7 +51,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Button>
           </div>
           
-          <nav className="flex-1 space-y-1 p-4 overflow-hidden">
+          <nav className="flex-1 space-y-1 p-4">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
