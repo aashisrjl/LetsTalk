@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Video, VideoOff, Mic, MicOff, MessageSquare, Users, Settings, Phone, ArrowLeft } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const Room = () => {
   const { roomId } = useParams();
@@ -20,22 +21,56 @@ const Room = () => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState({ name: "You", photo: null }); // Default user data
+  const [user, setUser] = useState({ _id: null, name: "You", photo: null });
+  const socket = useRef(null);
 
-  // Fetch user data on mount
+  // Initialize Socket.IO
+  useEffect(() => {
+    socket.current = io("http://localhost:3000", { withCredentials: true });
+
+    socket.current.on("connect", () => {
+      console.log("Connected to Socket.IO:", socket.current.id);
+    });
+
+    socket.current.on("disconnect", () => {
+      console.log("Disconnected from Socket.IO");
+    });
+
+    // Listen for room updates
+    socket.current.on("roomUsers", ({ users, ownerId }) => {
+      setParticipants(users.map(u => ({ _id: u.userId, name: u.userName, photo: null }))); // Placeholder for photo
+    });
+
+    socket.current.on("userJoined", ({ userId, userName }) => {
+      setParticipants(prev => [...prev, { _id: userId, name: userName, photo: null }]);
+    });
+
+    socket.current.on("userLeft", ({ userId }) => {
+      setParticipants(prev => prev.filter(p => p._id !== userId));
+    });
+
+    socket.current.on("receiveMessage", ({ message, userName, time }) => {
+      setMessages(prev => [...prev, { id: Date.now(), user: userName, message, time }]);
+    });
+
+    return () => {
+      if (socket.current) socket.current.disconnect();
+    };
+  }, []);
+
+  // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await axios.get("http://localhost:3000/auth/user", {
-          withCredentials: true, // Match your auth middleware
+          withCredentials: true,
         });
         if (response.data.success) {
           setUser({
+            _id: response.data.user.id,
             name: response.data.user.name || "You",
-            photo: response.data.user.photo || null, // URL or null
+            photo: response.data.user.photo || null,
           });
-        } else {
-          console.error("Failed to fetch user profile:", response.data.message);
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -45,7 +80,7 @@ const Room = () => {
     fetchUserData();
   }, []);
 
-  // Fetch room data when component mounts
+  // Fetch room data and join room
   useEffect(() => {
     const fetchRoomData = async () => {
       try {
@@ -55,8 +90,13 @@ const Room = () => {
         });
         if (response.data.success) {
           setRoomData(response.data.room);
-          setParticipants(response.data.room.participants || []);
-          setMessages(response.data.room.messages || []);
+          // Initial participants from API (can be enhanced with Socket.IO)
+          const initialParticipants = (response.data.room.participants || []).map(p => ({
+            _id: p._id,
+            name: p.name || "Unknown", // Adjust based on your API response
+            photo: p.photo || null,
+          }));
+          setParticipants(initialParticipants);
         } else {
           setError("Failed to fetch room data.");
         }
@@ -68,27 +108,24 @@ const Room = () => {
       }
     };
 
-    if (roomId) {
+    if (roomId && user._id) {
       fetchRoomData();
+      socket.current.emit("joinRoom", { roomId, userId: user._id, userName: user.name });
     }
-  }, [roomId]);
+  }, [roomId, user._id]);
 
   const sendMessage = () => {
-    if (message.trim()) {
-      const newMessage = {
-        id: messages.length + 1,
-        user: user.name,
-        message: message.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages([...messages, newMessage]);
+    if (message.trim() && socket.current) {
+      socket.current.emit("sendMessage", { message });
       setMessage("");
-      // Optionally send to server
-      // axios.post(`http://localhost:3000/rooms/${roomId}/messages`, newMessage, { withCredentials: true });
     }
   };
 
   const leaveRoom = () => {
+    if (socket.current) {
+      socket.current.emit("leaveRoom", { roomId, userId: user._id }); // Optional event
+      socket.current.leave(roomId);
+    }
     navigate("/rooms");
   };
 
@@ -106,7 +143,7 @@ const Room = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/rooms")}
+                onClick={leaveRoom}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -125,7 +162,7 @@ const Room = () => {
                     <span>•</span>
                     <span>{roomData.topic}</span>
                     <span>•</span>
-                    <span>{roomData.participants?.length || 0}/{roomData.maxParticipants} participants</span>
+                    <span>{participants.length}/{roomData.maxParticipants} participants</span>
                   </div>
                 </div>
               </div>
@@ -179,32 +216,22 @@ const Room = () => {
 
               {/* Participant Videos */}
               <div className="grid grid-cols-3 gap-4 h-1/3">
-                {participants.map((participant) => (
-                  <Card key={participant._id || participant.id}>
-                    <CardContent className="p-2 h-full">
-                      <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
-                        <div className="text-white text-center">
-                          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                            {participant.name[0]}
+                {participants
+                  .filter(p => p._id !== user._id) // Exclude yourself
+                  .map((participant) => (
+                    <Card key={participant._id}>
+                      <CardContent className="p-2 h-full">
+                        <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
+                          <div className="text-white text-center">
+                            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                              {participant.name[0]}
+                            </div>
+                            <p className="text-sm">{participant.name}</p>
                           </div>
-                          <p className="text-sm">{participant.name}</p>
                         </div>
-                        <div className="absolute bottom-1 right-1 flex gap-1">
-                          {participant.video ? (
-                            <Video className="h-3 w-3 text-green-400" />
-                          ) : (
-                            <VideoOff className="h-3 w-3 text-red-400" />
-                          )}
-                          {participant.audio ? (
-                            <Mic className="h-3 w-3 text-green-400" />
-                          ) : (
-                            <MicOff className="h-3 w-3 text-red-400" />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </div>
 
@@ -220,25 +247,13 @@ const Room = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {participants.map((participant) => (
-                    <div key={participant._id || participant.id} className="flex items-center justify-between">
+                    <div key={participant._id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
                           {participant.name[0]}
                         </div>
                         <span className="text-sm">{participant.name}</span>
-                        {participant.isOwner && <Badge variant="secondary">Owner</Badge>}
-                      </div>
-                      <div className="flex gap-1">
-                        {participant.video ? (
-                          <Video className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <VideoOff className="h-3 w-3 text-red-500" />
-                        )}
-                        {participant.audio ? (
-                          <Mic className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <MicOff className="h-3 w-3 text-red-500" />
-                        )}
+                        {participant._id === roomOwners[roomId] && <Badge variant="secondary">Owner</Badge>}
                       </div>
                     </div>
                   ))}

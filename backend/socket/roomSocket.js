@@ -7,29 +7,31 @@ module.exports = (io) => {
   io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
 
-    // Join a room
-    socket.on('joinRoom', async ({ roomId, userId, userName }) => {
-      socket.join(roomId);
-      socket.roomId = roomId;
-      socket.userId = userId;
-      socket.userName = userName;
+    socket.on("joinRoom", async ({ roomId, userId, userName }) => {
+  socket.join(roomId);
+  socket.roomId = roomId;
+  socket.userId = userId;
+  socket.userName = userName;
 
-      if (!roomUsers[roomId]) roomUsers[roomId] = [];
+  if (!roomUsers[roomId]) roomUsers[roomId] = [];
+  if (!roomOwners[roomId]) roomOwners[roomId] = userId;
 
-      // If first user to join room, set as owner
-      if (!roomOwners[roomId]) {
-        roomOwners[roomId] = userId;
-      }
+  roomUsers[roomId].push({ socketId: socket.id, userId, userName });
 
-      roomUsers[roomId].push({ socketId: socket.id, userId, userName });
+  // Update database
+  const room = await Room.findOne({ roomId });
+  if (room && !room.participants.includes(userId)) {
+    room.participants.push(userId);
+    await room.save();
+  }
 
-      io.to(roomId).emit('roomUsers', {
-        users: roomUsers[roomId],
-        ownerId: roomOwners[roomId],
-      });
+  io.to(roomId).emit("roomUsers", {
+    users: roomUsers[roomId],
+    ownerId: roomOwners[roomId],
+  });
 
-      socket.to(roomId).emit('userJoined', { userId, userName, socketId: socket.id });
-    });
+  socket.to(roomId).emit("userJoined", { userId, userName, socketId: socket.id });
+});
 
     // Handle chat messages
     socket.on('sendMessage', ({ message }) => {
