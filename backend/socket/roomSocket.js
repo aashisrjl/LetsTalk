@@ -1,4 +1,6 @@
 const Room = require('../database/models/room.model');
+const User = require('../database/models/user.model');
+
 
 module.exports = (io) => {
   const roomUsers = {}; // { roomId: [{ socketId, userId, userName }] }
@@ -7,22 +9,27 @@ module.exports = (io) => {
   io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
 
-    socket.on("joinRoom", async ({ roomId, userId, userName }) => {
+  socket.on("joinRoom", async ({ roomId, userId, userName }) => {
   socket.join(roomId);
   socket.roomId = roomId;
   socket.userId = userId;
   socket.userName = userName;
 
   if (!roomUsers[roomId]) roomUsers[roomId] = [];
-  if (!roomOwners[roomId]) roomOwners[roomId] = userId;
+  if (!roomOwners[roomId]) {
+    roomOwners[roomId] = userId;
+    await Room.findOneAndUpdate({ roomId }, { createdBy: userId }, { upsert: true });
+  }
 
-  roomUsers[roomId].push({ socketId: socket.id, userId, userName });
-
-  // Update database
-  const room = await Room.findOne({ roomId });
-  if (room && !room.participants.includes(userId)) {
-    room.participants.push(userId);
-    await room.save();
+  const user = await User.findById(userId).select("name photo");
+  const userData = { socketId: socket.id, userId, userName: user.name, photo: user.photo };
+  if (!roomUsers[roomId].some(u => u.userId === userId)) {
+    roomUsers[roomId].push(userData);
+    await Room.findOneAndUpdate(
+      { roomId },
+      { $addToSet: { participants: userId } },
+      { upsert: true }
+    );
   }
 
   io.to(roomId).emit("roomUsers", {
@@ -30,20 +37,48 @@ module.exports = (io) => {
     ownerId: roomOwners[roomId],
   });
 
-  socket.to(roomId).emit("userJoined", { userId, userName, socketId: socket.id });
+  socket.to(roomId).emit("userJoined", {
+    userId,
+    userName: user.name,
+    photo: user.photo,
+    socketId: socket.id,
+  });
+
+  // Broadcast to all users in the room except the sender
+  socket.to(roomId).emit("userConnected", { userId, socketId: socket.id });
 });
 
-    // Handle chat messages
-    socket.on('sendMessage', ({ message }) => {
-      const { roomId, userName } = socket;
-      if (!roomId || !userName) return;
+socket.on("offer", ({ toSocketId, offer }) => {
+  socket.to(toSocketId).emit("offer", { fromSocketId: socket.id, offer });
+});
 
-      io.to(roomId).emit('receiveMessage', {
-        message,
-        userName,
-        time: new Date().toLocaleTimeString(),
-      });
+socket.on("answer", ({ toSocketId, answer }) => {
+  socket.to(toSocketId).emit("answer", { fromSocketId: socket.id, answer });
+});
+
+socket.on("iceCandidate", ({ toSocketId, candidate }) => {
+  socket.to(toSocketId).emit("iceCandidate", { fromSocketId: socket.id, candidate });
+});
+
+socket.on("leaveRoom", ({ roomId, userId }) => {
+  if (roomUsers[roomId]) {
+    roomUsers[roomId] = roomUsers[roomId].filter(u => u.userId !== userId);
+    io.to(roomId).emit("roomUsers", {
+      users: roomUsers[roomId],
+      ownerId: roomOwners[roomId],
     });
+    socket.to(roomId).emit("userDisconnected", { userId });
+    socket.leave(roomId);
+  }
+});
+
+socket.on("sendMessage", ({ message, userName, time }) => {
+  socket.broadcast.to(socket.roomId).emit("receiveMessage", {
+    message,
+    userName,
+    time,
+  });
+});
 
     // WebRTC signaling (video/audio)
     socket.on('signal', ({ to, data }) => {

@@ -2,9 +2,11 @@
 const express = require('express');
 const passport = require('../services/passport');
 const generateToken = require('../utils/jwt');
-const { getUserProfile } = require('../controller/user.controller');
+const { getUserProfile, getUserById } = require('../controller/user.controller');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
+
+router.get('/users/:id', isAuthenticated, getUserById);
 
 router.get('/auth/user',isAuthenticated,getUserProfile );
 // Google callback

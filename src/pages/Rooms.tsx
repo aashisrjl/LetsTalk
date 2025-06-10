@@ -48,13 +48,21 @@ const Rooms = () => {
     fetchLiveRooms();
   }, []); // Empty dependency array means it runs once on mount
 
-  const filteredRooms = rooms.filter((room) => {
-    const matchesSearch =
-      room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      room.topic.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLanguage = selectedLanguage === "all" || room.language === selectedLanguage;
-    return matchesSearch && matchesLanguage;
-  });
+ const filteredRooms = rooms.filter((room) => {
+  // Check if room is defined and has the required properties
+  if (!room || typeof room !== 'object') return false;
+
+  const title = room.title || '';
+  const topic = room.topic || '';
+  const language = room.language || '';
+
+  const matchesSearch = (
+    title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    topic.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const matchesLanguage = selectedLanguage === "all" || language === selectedLanguage;
+  return matchesSearch && matchesLanguage;
+});
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">

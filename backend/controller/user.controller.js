@@ -18,3 +18,17 @@ exports.getUserProfile = async (req, res) => {
     },
   });
 };
+
+// Get user by ID
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('name photo'); // Only return name and photo
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.status(200).json({ success: true, user: { id: user._id, name: user.name, photo: user.photo } });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

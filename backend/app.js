@@ -3,47 +3,38 @@ require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
-const server = http.createServer(express());
 const passport = require('./services/passport');
 const socketIO = require('socket.io');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+
 const app = express();
-app.use(passport.initialize());
+const server = http.createServer(app);
 const port = process.env.PORT || 3000;
-const io = socketIO(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-    credentials: true,
-  },
-});
-
-require('./socket/roomSocket')(io); // Socket handlers
-
 
 // Database connection
 const connectToDatabase = require('./database/connection');
-connectToDatabase();
+connectToDatabase().catch(err => {
+  console.error('Database connection failed:', err);
+  process.exit(1);
+});
 
-// CORS configuration
-const cors = require('cors');
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:8080', 
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204 
-};
-app.use(cors(corsOptions));
-
-const cookieParser = require('cookie-parser');
+// Middleware
+app.use(passport.initialize());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+}));
 app.use(cookieParser());
-
-// Body parser configuration
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Home route
 app.get('/', (req, res) => {
-    res.send('Welcome to the backend server!');
+  res.send('Welcome to the backend server!');
 });
 
 // Routes
@@ -54,17 +45,34 @@ app.use('/', userRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
 // 404 handler
 app.use((req, res) => {
-    res.status(404).send('Not Found');
+  res.status(404).send('Not Found');
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+// Socket.IO setup
+const io = socketIO(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    credentials: true,
+  },
+});
+require('./socket/roomSocket')(io);
+
+// Start server
+server.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Please free it up.`);
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
 });
 
-module.exports = app;
+module.exports = { app, server };

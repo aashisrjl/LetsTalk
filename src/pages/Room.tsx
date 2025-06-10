@@ -1,14 +1,14 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Video, VideoOff, Mic, MicOff, MessageSquare, Users, Settings, Phone, ArrowLeft } from "lucide-react";
+import { Video, VideoOff, Mic, MicOff, MessageSquare, Users, Phone, ArrowLeft } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const Room = () => {
   const { roomId } = useParams();
@@ -19,21 +19,107 @@ const Room = () => {
   const [messages, setMessages] = useState([]);
   const [roomData, setRoomData] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [ownerId, setOwnerId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState({ name: "You", photo: null }); // Default user data
+  const [user, setUser] = useState({ _id: null, name: "You", photo: null });
+  const socket = useRef(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement }>({}); // Typed ref for remote videos
+  const peerConnections = useRef<{ [key: string]: RTCPeerConnection }>({}); // Typed ref for peer connections
+  const localStream = useRef<MediaStream | null>(null); // Store local stream
+  const configuration = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }], // Basic STUN server
+  };
 
-  // Fetch user data on mount
+  useEffect(() => {
+    socket.current = io("http://localhost:3000", { withCredentials: true });
+
+    socket.current.on("connect", () => {
+      console.log("Connected to Socket.IO:", socket.current.id);
+    });
+
+    socket.current.on("disconnect", () => {
+      console.log("Disconnected from Socket.IO");
+    });
+
+    socket.current.on("roomUsers", ({ users, ownerId: newOwnerId }) => {
+      const uniqueParticipants = users.reduce((acc, curr) => {
+        if (!acc.some(p => p._id === curr.userId)) {
+          acc.push({ _id: curr.userId, name: curr.userName, photo: curr.photo || null });
+        }
+        return acc;
+      }, []);
+      setParticipants(uniqueParticipants);
+      setOwnerId(newOwnerId);
+      console.log("Updated participants:", uniqueParticipants, "Owner:", newOwnerId);
+    });
+
+    socket.current.on("userJoined", ({ userId, userName, photo, socketId }) => {
+      setParticipants(prev => {
+        if (!prev.some(p => p._id === userId)) {
+          return [...prev, { _id: userId, name: userName, photo: photo || null }];
+        }
+        return prev;
+      });
+      createPeerConnection(socketId, userId);
+    });
+
+    socket.current.on("userDisconnected", ({ userId }) => {
+      setParticipants(prev => prev.filter(p => p._id !== userId)); // Update participants on disconnect
+      if (peerConnections.current[userId]) {
+        peerConnections.current[userId].close();
+        delete peerConnections.current[userId];
+        delete remoteVideoRefs.current[userId];
+      }
+    });
+
+    socket.current.on("receiveMessage", ({ message, userName, time }) => {
+      console.log("Received message:", { message, userName, time }); // Debug log
+      // Only add message if it wasn't sent by the current user
+      if (userName !== user.name) {
+        setMessages(prev => [...prev, { id: Date.now(), user: userName, message, time }]);
+      }
+    });
+
+    socket.current.on("offer", ({ fromSocketId, offer }) => {
+      createPeerConnectionFromOffer(fromSocketId, offer);
+    });
+
+    socket.current.on("answer", ({ fromSocketId, answer }) => {
+      if (peerConnections.current[fromSocketId]) {
+        peerConnections.current[fromSocketId].setRemoteDescription(new RTCSessionDescription(answer));
+      }
+    });
+
+    socket.current.on("iceCandidate", ({ fromSocketId, candidate }) => {
+      if (peerConnections.current[fromSocketId]) {
+        peerConnections.current[fromSocketId].addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    return () => {
+      if (socket.current) {
+        socket.current.emit("leaveRoom", { roomId, userId: user._id });
+        Object.values(peerConnections.current).forEach(pc => pc.close());
+        if (localStream.current) {
+          localStream.current.getTracks().forEach(track => track.stop());
+        }
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await axios.get("http://localhost:3000/auth/user", {
-          withCredentials: true, // Match your auth middleware
+          withCredentials: true,
         });
         if (response.data.success) {
           setUser({
+            _id: response.data.user.id,
             name: response.data.user.name || "You",
-            photo: response.data.user.photo || null, // URL or null
+            photo: response.data.user.photo || null,
           });
         } else {
           console.error("Failed to fetch user profile:", response.data.message);
@@ -46,7 +132,6 @@ const Room = () => {
     fetchUserData();
   }, []);
 
-  // Fetch room data when component mounts
   useEffect(() => {
     const fetchRoomData = async () => {
       try {
@@ -56,8 +141,20 @@ const Room = () => {
         });
         if (response.data.success) {
           setRoomData(response.data.room);
-          setParticipants(response.data.room.participants || []);
-          setMessages(response.data.room.messages || []);
+          const initialParticipants = await Promise.all(
+            (response.data.room.participants || []).map(async (pId) => {
+              const userResponse = await axios.get(`http://localhost:3000/users/${pId}`, {
+                withCredentials: true,
+              });
+              return {
+                _id: userResponse.data.user.id,
+                name: userResponse.data.user.name || "Unknown",
+                photo: userResponse.data.user.photo || null,
+              };
+            })
+          );
+          setParticipants(initialParticipants);
+          setOwnerId(response.data.room.createdBy);
         } else {
           setError("Failed to fetch room data.");
         }
@@ -69,27 +166,157 @@ const Room = () => {
       }
     };
 
-    if (roomId) {
+    if (roomId && user._id) {
       fetchRoomData();
+      socket.current.emit("joinRoom", { roomId, userId: user._id, userName: user.name });
+      startLocalStream();
     }
-  }, [roomId]);
+  }, [roomId, user._id]);
+
+  const startLocalStream = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideoEnabled,
+        audio: isAudioEnabled,
+      }).catch(err => {
+        console.error("Error accessing media devices:", err);
+        setError("Please allow camera and microphone access in your browser settings.");
+        return null;
+      });
+      if (stream && localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localStream.current = stream;
+        // Add tracks to existing peer connections
+        Object.values(peerConnections.current).forEach(pc => {
+          stream.getTracks().forEach(track => {
+            if (!pc.getSenders().some(sender => sender.track === track)) {
+              pc.addTrack(track, stream);
+            }
+          });
+        });
+      }
+    } catch (err) {
+      console.error("Unexpected error accessing media devices:", err);
+      setError("Unexpected error accessing media devices. Please try again.");
+    }
+  };
+
+  const createPeerConnection = (socketId, userId) => {
+    const pc = new RTCPeerConnection(configuration);
+    peerConnections.current[userId] = pc;
+
+    const remoteVideo = document.createElement("video");
+    remoteVideo.autoplay = true;
+    remoteVideo.playsInline = true;
+    remoteVideoRefs.current[userId] = remoteVideo;
+
+    pc.ontrack = (event) => {
+      console.log("Received remote track:", userId); // Debug log
+      if (remoteVideoRefs.current[userId]) {
+        remoteVideoRefs.current[userId].srcObject = event.streams[0];
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.current.emit("iceCandidate", { toSocketId: socketId, candidate: event.candidate });
+      }
+    };
+
+    if (localStream.current) {
+      localStream.current.getTracks().forEach(track => {
+        if (!pc.getSenders().some(sender => sender.track === track)) {
+          pc.addTrack(track, localStream.current);
+        }
+      });
+    }
+
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .then(() => {
+        socket.current.emit("offer", { toSocketId: socketId, offer: pc.localDescription });
+      })
+      .catch(err => console.error("Error creating offer:", err));
+  };
+
+  const createPeerConnectionFromOffer = (fromSocketId, offer) => {
+    const pc = new RTCPeerConnection(configuration);
+    peerConnections.current[fromSocketId] = pc;
+
+    const remoteVideo = document.createElement("video");
+    remoteVideo.autoplay = true;
+    remoteVideo.playsInline = true;
+    remoteVideoRefs.current[fromSocketId] = remoteVideo;
+
+    pc.ontrack = (event) => {
+      console.log("Received remote track:", fromSocketId); // Debug log
+      if (remoteVideoRefs.current[fromSocketId]) {
+        remoteVideoRefs.current[fromSocketId].srcObject = event.streams[0];
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.current.emit("iceCandidate", { toSocketId: fromSocketId, candidate: event.candidate });
+      }
+    };
+
+    pc.setRemoteDescription(new RTCSessionDescription(offer))
+      .then(() => {
+        if (localStream.current) {
+          localStream.current.getTracks().forEach(track => {
+            if (!pc.getSenders().some(sender => sender.track === track)) {
+              pc.addTrack(track, localStream.current);
+            }
+          });
+        }
+        return pc.createAnswer();
+      })
+      .then(answer => pc.setLocalDescription(answer))
+      .then(() => {
+        socket.current.emit("answer", { toSocketId: fromSocketId, answer: pc.localDescription });
+      })
+      .catch(err => console.error("Error handling offer:", err));
+  };
+
+  const toggleVideo = () => {
+    setIsVideoEnabled(!isVideoEnabled);
+    if (localStream.current) {
+      localStream.current.getVideoTracks().forEach(track => {
+        track.enabled = !isVideoEnabled;
+        if (!isVideoEnabled) track.stop(); // Stop the track when disabled
+      });
+    }
+  };
+
+  const toggleAudio = () => {
+    setIsAudioEnabled(!isAudioEnabled);
+    if (localStream.current) {
+      localStream.current.getAudioTracks().forEach(track => {
+        track.enabled = !isAudioEnabled;
+        if (!isAudioEnabled) track.stop(); // Stop the track when disabled
+      });
+    }
+  };
 
   const sendMessage = () => {
-    if (message.trim()) {
-      const newMessage = {
-        id: messages.length + 1,
-        user: user.name,
-        message: message.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages([...messages, newMessage]);
+    if (message.trim() && socket.current) {
+      const time = new Date().toLocaleTimeString();
+      const newMessage = { id: Date.now(), user: user.name, message, time };
+      socket.current.emit("sendMessage", { message, userName: user.name, time });
+      setMessages(prev => [...prev, newMessage]); // Add only locally sent message
       setMessage("");
-      // Optionally send to server
-      // axios.post(`http://localhost:3000/rooms/${roomId}/messages`, newMessage, { withCredentials: true });
     }
   };
 
   const leaveRoom = () => {
+    if (socket.current) {
+      socket.current.emit("leaveRoom", { roomId, userId: user._id });
+      Object.values(peerConnections.current).forEach(pc => pc.close());
+      if (localStream.current) {
+        localStream.current.getTracks().forEach(track => track.stop());
+      }
+    }
     navigate("/rooms");
   };
 
@@ -100,16 +327,10 @@ const Room = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <div className="bg-card border-b p-2 sm:p-4">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/rooms")}
-                className="flex-shrink-0"
-              >
+              <Button variant="ghost" size="icon" onClick={leaveRoom} className="flex-shrink-0">
                 <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -127,7 +348,7 @@ const Room = () => {
                     <span className="hidden sm:inline">•</span>
                     <span className="truncate">{roomData.topic}</span>
                     <span className="hidden sm:inline">•</span>
-                    <span className="whitespace-nowrap">{roomData.participants?.length || 0}/{roomData.maxParticipants}</span>
+                    <span className="whitespace-nowrap">{participants.length}/{roomData.maxParticipants}</span>
                   </div>
                 </div>
               </div>
@@ -141,29 +362,16 @@ const Room = () => {
 
         <div className="max-w-7xl mx-auto p-2 sm:p-4">
           <div className="flex flex-col lg:grid lg:grid-cols-4 gap-4 sm:gap-6 min-h-[calc(100vh-120px)]">
-            {/* Video Section */}
             <div className="lg:col-span-3 space-y-4 order-1 lg:order-1">
-              {/* Main Video (Your Video) */}
               <Card className="h-64 sm:h-80 lg:h-2/3">
                 <CardContent className="p-2 sm:p-4 h-full">
                   <div className="bg-gray-900 rounded-lg h-full flex items-center justify-center relative">
-                    <div className="text-white text-center">
-                      <Video className="h-8 w-8 sm:h-12 sm:w-12 lg:h-16 lg:w-16 mx-auto mb-2 sm:mb-4 opacity-50" />
-                      <p className="text-sm sm:text-lg">Your Video ({user.name})</p>
-                      {user.photo && (
-                        <img
-                          src={user.photo}
-                          alt={`${user.name}'s profile`}
-                          className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-full object-cover mx-auto mt-2"
-                        />
-                      )}
-                      <p className="text-xs sm:text-sm opacity-75">Camera is {isVideoEnabled ? 'on' : 'off'}</p>
-                    </div>
+                    <video ref={localVideoRef} className="w-full h-full object-cover rounded-lg" muted />
                     <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex gap-1 sm:gap-2">
                       <Button
                         size="sm"
                         variant={isVideoEnabled ? "default" : "destructive"}
-                        onClick={() => setIsVideoEnabled(!isVideoEnabled)}
+                        onClick={toggleVideo}
                         className="h-8 w-8 sm:h-auto sm:w-auto p-1 sm:p-2"
                       >
                         {isVideoEnabled ? <Video className="h-3 w-3 sm:h-4 sm:w-4" /> : <VideoOff className="h-3 w-3 sm:h-4 sm:w-4" />}
@@ -171,7 +379,7 @@ const Room = () => {
                       <Button
                         size="sm"
                         variant={isAudioEnabled ? "default" : "destructive"}
-                        onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+                        onClick={toggleAudio}
                         className="h-8 w-8 sm:h-auto sm:w-auto p-1 sm:p-2"
                       >
                         {isAudioEnabled ? <Mic className="h-3 w-3 sm:h-4 sm:w-4" /> : <MicOff className="h-3 w-3 sm:h-4 sm:w-4" />}
@@ -181,40 +389,34 @@ const Room = () => {
                 </CardContent>
               </Card>
 
-              {/* Participant Videos */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 h-32 sm:h-40 lg:h-1/3">
-                {participants.map((participant) => (
-                  <Card key={participant._id || participant.id}>
-                    <CardContent className="p-1 sm:p-2 h-full">
-                      <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
-                        <div className="text-white text-center">
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2 text-xs sm:text-sm">
-                            {participant.name[0]}
+                {participants
+                  .filter(p => p._id !== user._id)
+                  .map((participant) => (
+                    <Card key={participant._id}>
+                      <CardContent className="p-1 sm:p-2 h-full">
+                        <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
+                          <video ref={el => (remoteVideoRefs.current[participant._id] = el)} className="w-full h-full object-cover rounded-lg" />
+                          <div className="absolute bottom-1 right-1 flex gap-1">
+                            {participant.video ? (
+                              <Video className="h-2 w-2 sm:h-3 sm:w-3 text-green-400" />
+                            ) : (
+                              <VideoOff className="h-2 w-2 sm:h-3 sm:w-3 text-red-400" />
+                            )}
+                            {participant.audio ? (
+                              <Mic className="h-2 w-2 sm:h-3 sm:w-3 text-green-400" />
+                            ) : (
+                              <MicOff className="h-2 w-2 sm:h-3 sm:w-3 text-red-400" />
+                            )}
                           </div>
-                          <p className="text-xs sm:text-sm truncate px-1">{participant.name}</p>
                         </div>
-                        <div className="absolute bottom-1 right-1 flex gap-1">
-                          {participant.video ? (
-                            <Video className="h-2 w-2 sm:h-3 sm:w-3 text-green-400" />
-                          ) : (
-                            <VideoOff className="h-2 w-2 sm:h-3 sm:w-3 text-red-400" />
-                          )}
-                          {participant.audio ? (
-                            <Mic className="h-2 w-2 sm:h-3 sm:w-3 text-green-400" />
-                          ) : (
-                            <MicOff className="h-2 w-2 sm:h-3 sm:w-3 text-red-400" />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-4 order-2 lg:order-2 lg:min-h-0">
-              {/* Participants */}
               <Card>
                 <CardHeader className="pb-2 sm:pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
@@ -224,13 +426,13 @@ const Room = () => {
                 </CardHeader>
                 <CardContent className="space-y-2 max-h-32 sm:max-h-40 lg:max-h-none overflow-y-auto">
                   {participants.map((participant) => (
-                    <div key={participant._id || participant.id} className="flex items-center justify-between">
+                    <div key={participant._id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs sm:text-sm flex-shrink-0">
                           {participant.name[0]}
                         </div>
                         <span className="text-xs sm:text-sm truncate">{participant.name}</span>
-                        {participant.isOwner && <Badge variant="secondary" className="text-xs">Owner</Badge>}
+                        {participant._id === ownerId && <Badge variant="secondary" className="text-xs">Owner</Badge>}
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         {participant.video ? (
@@ -249,7 +451,6 @@ const Room = () => {
                 </CardContent>
               </Card>
 
-              {/* Chat */}
               <Card className="flex-1 lg:min-h-0">
                 <CardHeader className="pb-2 sm:pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm sm:text-base">

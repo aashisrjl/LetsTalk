@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const languageSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  level: { 
+    type: String, 
+    enum: ['beginner', 'intermediate', 'advanced', 'native'],
+    default: 'beginner'
+  }
 });
 
 const userSchema = new mongoose.Schema({
