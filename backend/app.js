@@ -4,9 +4,10 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const server = http.createServer(express());
-const passport = require('./services/passport'); 
+const passport = require('./services/passport');
 const socketIO = require('socket.io');
 const app = express();
+app.use(passport.initialize());
 const port = process.env.PORT || 3000;
 const io = socketIO(server, {
   cors: {
@@ -39,10 +40,6 @@ app.use(cookieParser());
 // Body parser configuration
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Optional (if using sessions and login)
-app.use(passport.initialize());
-// app.use(passport.session()); // only needed if you're using sessions
 
 // Home route
 app.get('/', (req, res) => {

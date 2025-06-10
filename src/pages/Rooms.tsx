@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -16,61 +16,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import axios from "axios"; // Import axios for API calls
 
 const Rooms = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
-
-  const rooms = [
-    {
-      id: 1,
-      title: "English Conversation Practice",
-      language: "English",
-      participants: 12,
-      maxParticipants: 20,
-      isLive: true,
-      difficulty: "Intermediate",
-      topic: "Daily Life"
-    },
-    {
-      id: 2,
-      title: "Spanish Grammar Workshop",
-      language: "Spanish",
-      participants: 8,
-      maxParticipants: 15,
-      isLive: true,
-      difficulty: "Beginner",
-      topic: "Grammar"
-    },
-    {
-      id: 3,
-      title: "French Culture Discussion",
-      language: "French",
-      participants: 5,
-      maxParticipants: 10,
-      isLive: false,
-      difficulty: "Advanced",
-      topic: "Culture"
-    },
-    {
-      id: 4,
-      title: "Japanese Pronunciation",
-      language: "Japanese",
-      participants: 15,
-      maxParticipants: 25,
-      isLive: true,
-      difficulty: "Beginner",
-      topic: "Pronunciation"
-    }
-  ];
+  const [rooms, setRooms] = useState([]); // State for rooms data
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
 
   const languages = ["all", "English", "Spanish", "French", "Japanese", "German", "Italian"];
 
-  const filteredRooms = rooms.filter(room => {
-    const matchesSearch = room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         room.topic.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch live rooms from the API
+  useEffect(() => {
+    const fetchLiveRooms = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/rooms", {
+          
+        });
+        setRooms(response.data.rooms); // Assuming the API returns an array of rooms
+      } catch (err) {
+        setError("Failed to fetch live rooms. Please try again later.");
+        console.error("Error fetching live rooms:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLiveRooms();
+  }, []); // Empty dependency array means it runs once on mount
+
+  const filteredRooms = rooms.filter((room) => {
+    const matchesSearch =
+      room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.topic.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLanguage = selectedLanguage === "all" || room.language === selectedLanguage;
     return matchesSearch && matchesLanguage;
   });
@@ -80,10 +61,10 @@ const Rooms = () => {
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <div className="container mx-auto p-2">
           <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-          
+
           <div className="flex mt-4">
             <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-            
+
             <main className="flex-1 lg:ml-0">
               <div className="p-4 lg:p-6">
                 {/* Page Header */}
@@ -105,7 +86,7 @@ const Rooms = () => {
                       className="pl-10"
                     />
                   </div>
-                  
+
                   <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
                     <SelectTrigger className="w-full sm:w-48">
                       <Filter className="h-4 w-4 mr-2" />
@@ -125,38 +106,53 @@ const Rooms = () => {
                 <div className="flex gap-4 flex-wrap">
                   <Badge variant="secondary">{filteredRooms.length} rooms available</Badge>
                   <Badge variant="secondary">
-                    {filteredRooms.filter(r => r.isLive).length} live now
+                    {filteredRooms.filter((r) => r.isLive).length} live now
                   </Badge>
                   <Badge variant="secondary">
                     {filteredRooms.reduce((sum, r) => sum + r.participants, 0)} active participants
                   </Badge>
                 </div>
 
-                {/* Rooms Grid */}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredRooms.map((room) => (
-                    <RoomCard
-                      key={room.id}
-                      title={room.title}
-                      language={room.language}
-                      participants={room.participants}
-                      maxParticipants={room.maxParticipants}
-                      isLive={room.isLive}
-                      difficulty={room.difficulty}
-                      topic={room.topic}
-                    />
-                  ))}
-                </div>
-
-                {filteredRooms.length === 0 && (
+                {/* Loading or Error State */}
+                {loading ? (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground">No rooms found matching your criteria.</p>
-                    <Button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="mt-4"
-                    >
-                      Create a New Room
+                    <p className="text-muted-foreground">Loading rooms...</p>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-12">
+                    <p className="text-red-500">{error}</p>
+                    <Button onClick={() => window.location.reload()} className="mt-4">
+                      Retry
                     </Button>
+                  </div>
+                ) : (
+                  // Rooms Grid
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredRooms.length > 0 ? (
+                      filteredRooms.map((room) => (
+                        <RoomCard
+                          key={room._id}
+                          title={room.title}
+                          language={room.language}
+                          participants={room.participants}
+                          maxParticipants={room.maxParticipants}
+                          isLive={room.isLive}
+                          difficulty={room.difficulty}
+                          topic={room.topic}
+                          roomId={room.roomId}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">No rooms found matching your criteria.</p>
+                        <Button
+                          onClick={() => setIsCreateModalOpen(true)}
+                          className="mt-4"
+                        >
+                          Create a New Room
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -173,11 +169,11 @@ const Rooms = () => {
           <Plus className="h-6 w-6" />
         </Button>
 
-        <CreateRoomModal 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
+        <CreateRoomModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
         />
-        
+
         <Footer />
       </div>
     </ThemeProvider>

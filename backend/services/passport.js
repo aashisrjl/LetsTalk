@@ -27,6 +27,7 @@ passport.use(
         },
     async (accessToken, refreshToken, profile, done) => {
     try {
+        console.log('📥 Passport callback fired:', profile.id);
         const existingUser = await User.findOne({ providerId: profile.id });
 
         if (existingUser) return done(null, existingUser);
@@ -58,6 +59,7 @@ passport.use(
         },
        async (accessToken, refreshToken, profile, done) => {
     try {
+        console.log('📥 Passport callback fired:', profile.id);
         const existingUser = await User.findOne({ providerId: profile.id });
 
         if (existingUser) return done(null, existingUser);

@@ -23,12 +23,16 @@ export function RoomCard({
   isLive, 
   difficulty, 
   topic,
-  roomId = "test-room"
+  roomId = "test-room" // Default roomId as fallback
 }: RoomCardProps) {
   const navigate = useNavigate();
 
   const handleJoinRoom = () => {
-    navigate(`/room/${roomId}`);
+    if (roomId) {
+      navigate(`/room/${roomId}`);
+    } else {
+      console.error("No roomId provided for navigation");
+    }
   };
 
   return (
@@ -87,6 +91,7 @@ export function RoomCard({
           className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
           variant={isLive ? "default" : "outline"}
           onClick={handleJoinRoom}
+          disabled={!roomId} // Disable button if no roomId
         >
           {isLive ? "Join Now" : "Schedule"}
         </Button>

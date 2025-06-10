@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Video, VideoOff, Mic, MicOff, MessageSquare, Users, Settings, Phone, ArrowLeft } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import axios from "axios"; // Added for API calls
 
 const Room = () => {
   const { roomId } = useParams();
@@ -15,43 +15,62 @@ const Room = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, user: "John", message: "Welcome to the room!", time: "10:30 AM" },
-    { id: 2, user: "Sarah", message: "Hello everyone!", time: "10:31 AM" },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [roomData, setRoomData] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock room data
-  const roomData = {
-    title: "English Conversation Practice",
-    language: "English",
-    participants: 5,
-    maxParticipants: 10,
-    topic: "Daily Life"
-  };
+  // Fetch room data when component mounts
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:3000/rooms/${roomId}`, {
+          withCredentials: true, // If authentication is required
+        });
+        if (response.data.success) {
+          setRoomData(response.data.room); // Adjust based on your API response structure
+          setParticipants(response.data.room.participants || []); // Adjust based on participants structure
+          setMessages(response.data.room.messages || []); // Adjust if messages are part of the response
+        } else {
+          setError("Failed to fetch room data.");
+        }
+      } catch (err) {
+        setError("Error fetching room data. Please try again.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const participants = [
-    { id: 1, name: "You", isOwner: true, video: true, audio: true },
-    { id: 2, name: "John", isOwner: false, video: true, audio: true },
-    { id: 3, name: "Sarah", isOwner: false, video: false, audio: true },
-    { id: 4, name: "Mike", isOwner: false, video: true, audio: false },
-  ];
+    if (roomId) {
+      fetchRoomData();
+    }
+  }, [roomId]);
 
   const sendMessage = () => {
     if (message.trim()) {
       const newMessage = {
         id: messages.length + 1,
-        user: "You",
+        user: "You", // Replace with authenticated user if available
         message: message.trim(),
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages([...messages, newMessage]);
       setMessage("");
+      // Optionally, send the message to the server to update the room
+      // axios.post(`http://localhost:3000/rooms/${roomId}/messages`, newMessage, { withCredentials: true });
     }
   };
 
   const leaveRoom = () => {
     navigate("/rooms");
   };
+
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+  if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+  if (!roomData) return <div className="p-4 text-center">Room not found.</div>;
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
@@ -74,7 +93,7 @@ const Room = () => {
                   <span>•</span>
                   <span>{roomData.topic}</span>
                   <span>•</span>
-                  <span>{roomData.participants}/{roomData.maxParticipants} participants</span>
+                  <span>{roomData.participants?.length || 0}/{roomData.maxParticipants} participants</span>
                 </div>
               </div>
             </div>
@@ -120,8 +139,8 @@ const Room = () => {
 
               {/* Participant Videos */}
               <div className="grid grid-cols-3 gap-4 h-1/3">
-                {participants.slice(1).map((participant) => (
-                  <Card key={participant.id}>
+                {participants.map((participant) => (
+                  <Card key={participant._id || participant.id}> {/* Use _id if from API, fallback to id */}
                     <CardContent className="p-2 h-full">
                       <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
                         <div className="text-white text-center">
@@ -161,7 +180,7 @@ const Room = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {participants.map((participant) => (
-                    <div key={participant.id} className="flex items-center justify-between">
+                    <div key={participant._id || participant.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
                           {participant.name[0]}

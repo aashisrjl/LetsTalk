@@ -1,6 +1,5 @@
-"use client";
-
-import { useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import {
@@ -58,6 +57,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
 
   const [newTag, setNewTag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Add useNavigate hook
 
   const addTag = () => {
     if (newTag.trim() && !roomData.tags.includes(newTag.trim())) {
@@ -95,12 +95,14 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         "http://localhost:3000/rooms",
         payload,
         {
-          withCredentials: true, // ✅ Important for cookie-based JWT
+          withCredentials: true,
         }
       );
 
       console.log("Room created:", response.data);
-      onClose(); // Close modal
+      // Redirect to the room page with the roomId from the response
+      const roomId = response.data.room.roomId; // Adjust based on your API response structure
+      navigate(`/room/${roomId}`); // Redirect to /room/:roomId
     } catch (error: any) {
       console.error("Error creating room:", error.response?.data || error.message);
       alert("Failed to create room. Please try again.");

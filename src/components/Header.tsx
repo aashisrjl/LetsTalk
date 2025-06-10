@@ -22,22 +22,26 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   const [notificationCount] = useState(3);
 
-    const handleLogout = async()=>{
-      try {
-      //   const res =  await axios.post('http://localhost:3000/logout',{
-      //   withCrediantials: true,
-      // })
-      // if(res.status === 200){
-      //   console.log("logout successfully")
-      // }
-      window.location.href=`http://localhost:8080/auth`
-        
-      } catch (error) {
-        console.log("error occured",error)
+ const handleLogout = async () => {
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/logout',
+      {}, // empty body
+      {
+        withCredentials: true,
       }
-    
+    );
 
+    if (res.status === 200) {
+      console.log('Logout successful');
+      window.location.href = 'http://localhost:8080/auth';
     }
+  } catch (error) {
+    console.log('Error occurred', error);
+  }
+};
+
+
 
  
 

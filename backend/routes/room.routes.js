@@ -5,7 +5,7 @@ const { isAuthenticated } = require('../middleware/auth.middleware');
 
 router.post('/rooms', isAuthenticated,createRoom);
 router.get('/rooms', getPublicRooms);
-router.get('/rooms/:roomId', getRoomById);
+router.get('/rooms/:roomId',isAuthenticated,getRoomById);
 router.get('/rooms/live', getLiveRooms);
 router.delete('/rooms/:roomId', isAuthenticated, deleteRoom);
 
