@@ -192,7 +192,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[5, 10, 15, 20, 25, 30].map((num) => (
+                {[2, 3, 4, 5, 7, 10].map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />

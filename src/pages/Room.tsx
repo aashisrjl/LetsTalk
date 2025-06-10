@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Video, VideoOff, Mic, MicOff, MessageSquare, Users, Settings, Phone, ArrowLeft } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import axios from "axios"; // Added for API calls
+import axios from "axios";
 
 const Room = () => {
   const { roomId } = useParams();
@@ -20,6 +20,30 @@ const Room = () => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState({ name: "You", photo: null }); // Default user data
+
+  // Fetch user data on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/auth/user", {
+          withCredentials: true, // Match your auth middleware
+        });
+        if (response.data.success) {
+          setUser({
+            name: response.data.user.name || "You",
+            photo: response.data.user.photo || null, // URL or null
+          });
+        } else {
+          console.error("Failed to fetch user profile:", response.data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   // Fetch room data when component mounts
   useEffect(() => {
@@ -27,12 +51,12 @@ const Room = () => {
       try {
         setLoading(true);
         const response = await axios.get(`http://localhost:3000/rooms/${roomId}`, {
-          withCredentials: true, // If authentication is required
+          withCredentials: true,
         });
         if (response.data.success) {
-          setRoomData(response.data.room); // Adjust based on your API response structure
-          setParticipants(response.data.room.participants || []); // Adjust based on participants structure
-          setMessages(response.data.room.messages || []); // Adjust if messages are part of the response
+          setRoomData(response.data.room);
+          setParticipants(response.data.room.participants || []);
+          setMessages(response.data.room.messages || []);
         } else {
           setError("Failed to fetch room data.");
         }
@@ -53,13 +77,13 @@ const Room = () => {
     if (message.trim()) {
       const newMessage = {
         id: messages.length + 1,
-        user: "You", // Replace with authenticated user if available
+        user: user.name,
         message: message.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages([...messages, newMessage]);
       setMessage("");
-      // Optionally, send the message to the server to update the room
+      // Optionally send to server
       // axios.post(`http://localhost:3000/rooms/${roomId}/messages`, newMessage, { withCredentials: true });
     }
   };
@@ -86,14 +110,23 @@ const Room = () => {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div>
-                <h1 className="text-xl font-semibold">{roomData.title}</h1>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline">{roomData.language}</Badge>
-                  <span>•</span>
-                  <span>{roomData.topic}</span>
-                  <span>•</span>
-                  <span>{roomData.participants?.length || 0}/{roomData.maxParticipants} participants</span>
+              <div className="flex items-center gap-2">
+                {user.photo && (
+                  <img
+                    src={user.photo}
+                    alt={`${user.name}'s profile`}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
+                <div>
+                  <h1 className="text-xl font-semibold">{roomData.title}</h1>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Badge variant="outline">{roomData.language}</Badge>
+                    <span>•</span>
+                    <span>{roomData.topic}</span>
+                    <span>•</span>
+                    <span>{roomData.participants?.length || 0}/{roomData.maxParticipants} participants</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -108,13 +141,20 @@ const Room = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-120px)]">
             {/* Video Section */}
             <div className="lg:col-span-3 space-y-4">
-              {/* Main Video */}
+              {/* Main Video (Your Video) */}
               <Card className="h-2/3">
                 <CardContent className="p-4 h-full">
                   <div className="bg-gray-900 rounded-lg h-full flex items-center justify-center relative">
                     <div className="text-white text-center">
                       <Video className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg">Your Video</p>
+                      <p className="text-lg">Your Video ({user.name})</p>
+                      {user.photo && (
+                        <img
+                          src={user.photo}
+                          alt={`${user.name}'s profile`}
+                          className="w-16 h-16 rounded-full object-cover mx-auto mt-2"
+                        />
+                      )}
                       <p className="text-sm opacity-75">Camera is {isVideoEnabled ? 'on' : 'off'}</p>
                     </div>
                     <div className="absolute bottom-4 left-4 flex gap-2">
@@ -140,7 +180,7 @@ const Room = () => {
               {/* Participant Videos */}
               <div className="grid grid-cols-3 gap-4 h-1/3">
                 {participants.map((participant) => (
-                  <Card key={participant._id || participant.id}> {/* Use _id if from API, fallback to id */}
+                  <Card key={participant._id || participant.id}>
                     <CardContent className="p-2 h-full">
                       <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
                         <div className="text-white text-center">
