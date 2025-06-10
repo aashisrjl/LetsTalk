@@ -1,8 +1,8 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Video, Mic, MessageSquare, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface RoomCardProps {
   title: string;
@@ -12,6 +12,7 @@ interface RoomCardProps {
   isLive: boolean;
   difficulty?: string;
   topic?: string;
+  roomId?: string;
 }
 
 export function RoomCard({ 
@@ -21,8 +22,15 @@ export function RoomCard({
   maxParticipants, 
   isLive, 
   difficulty, 
-  topic 
+  topic,
+  roomId = "test-room"
 }: RoomCardProps) {
+  const navigate = useNavigate();
+
+  const handleJoinRoom = () => {
+    navigate(`/room/${roomId}`);
+  };
+
   return (
     <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group">
       <CardHeader className="pb-3">
@@ -78,6 +86,7 @@ export function RoomCard({
         <Button 
           className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
           variant={isLive ? "default" : "outline"}
+          onClick={handleJoinRoom}
         >
           {isLive ? "Join Now" : "Schedule"}
         </Button>
