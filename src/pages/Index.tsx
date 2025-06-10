@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,6 +14,7 @@ const Index = () => {
   const isAuthenticated = true; // Changed back to true to show dashboard content
 
   return (
+    <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
     <div className="container">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-2">
@@ -30,6 +32,7 @@ const Index = () => {
       </div>
     </div>
     </div>
+    </ThemeProvider>
   );
 };
 

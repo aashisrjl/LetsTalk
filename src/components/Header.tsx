@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Menu, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useNavigation } from "react-router-dom";
+import axios from "axios";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -20,8 +22,27 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   const [notificationCount] = useState(3);
 
+    const handleLogout = async()=>{
+      try {
+      //   const res =  await axios.post('http://localhost:3000/logout',{
+      //   withCrediantials: true,
+      // })
+      // if(res.status === 200){
+      //   console.log("logout successfully")
+      // }
+      window.location.href=`http://localhost:8080/auth`
+        
+      } catch (error) {
+        console.log("error occured",error)
+      }
+    
+
+    }
+
+ 
+
   return (
-    <header className="sticky top-2 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 rounded-lg shadow-lg">
+    <header className="sticky top-2 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 rounded-lg shadow-lg flex-1">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Button
@@ -76,7 +97,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={()=>{handleLogout()}}>
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -51,7 +51,7 @@ router.get('/logout', (req, res) => {
       return res.status(500).json({ message: 'Logout failed' });
     }
     res.clearCookie('token'); // Clear the token cookie
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
+    // res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
   });
 });
 

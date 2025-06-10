@@ -13,7 +13,7 @@ const Auth = () => {
     setIsLoading('google');
     try {
       // Redirect to Google OAuth
-      window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/google`;
+      window.location.href = `http://localhost:3000/auth/google`;
     } catch (error) {
       console.error('Google authentication error:', error);
       setIsLoading(null);
@@ -24,7 +24,7 @@ const Auth = () => {
     setIsLoading('facebook');
     try {
       // Redirect to Facebook OAuth
-      window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/facebook`;
+      window.location.href = `http://localhost:3000/auth/facebook`;
     } catch (error) {
       console.error('Facebook authentication error:', error);
       setIsLoading(null);
