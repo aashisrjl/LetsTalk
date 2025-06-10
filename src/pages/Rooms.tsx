@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { Footer } from "@/components/Footer";
 import { RoomCard } from "@/components/RoomCard";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import { Plus, Search, Filter } from "lucide-react";
@@ -77,89 +77,91 @@ const Rooms = () => {
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
-      <div className="container min-h-screen bg-background text-foreground">
-        <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        
-        <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <div className="container mx-auto p-2">
+          <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
           
-          <main className="flex-1 p-4 lg:p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
-              {/* Page Header */}
-              <div className="flex flex-col gap-4">
-                <h1 className="text-3xl font-bold">Language Rooms</h1>
-                <p className="text-muted-foreground">
-                  Join conversations and practice languages with speakers from around the world. All rooms support video, voice, and text chat.
-                </p>
-              </div>
-
-              {/* Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search rooms or topics..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+          <div className="flex mt-4">
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            
+            <main className="flex-1 lg:ml-0">
+              <div className="p-4 lg:p-6">
+                {/* Page Header */}
+                <div className="flex flex-col gap-4">
+                  <h1 className="text-3xl font-bold">Language Rooms</h1>
+                  <p className="text-muted-foreground">
+                    Join conversations and practice languages with speakers from around the world. All rooms support video, voice, and text chat.
+                  </p>
                 </div>
-                
-                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Filter by language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang} value={lang}>
-                        {lang === "all" ? "All Languages" : lang}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* Room Stats */}
-              <div className="flex gap-4 flex-wrap">
-                <Badge variant="secondary">{filteredRooms.length} rooms available</Badge>
-                <Badge variant="secondary">
-                  {filteredRooms.filter(r => r.isLive).length} live now
-                </Badge>
-                <Badge variant="secondary">
-                  {filteredRooms.reduce((sum, r) => sum + r.participants, 0)} active participants
-                </Badge>
-              </div>
-
-              {/* Rooms Grid */}
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filteredRooms.map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    title={room.title}
-                    language={room.language}
-                    participants={room.participants}
-                    maxParticipants={room.maxParticipants}
-                    isLive={room.isLive}
-                    difficulty={room.difficulty}
-                    topic={room.topic}
-                  />
-                ))}
-              </div>
-
-              {filteredRooms.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No rooms found matching your criteria.</p>
-                  <Button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="mt-4"
-                  >
-                    Create a New Room
-                  </Button>
+                {/* Search and Filters */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search rooms or topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Filter by language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang} value={lang}>
+                          {lang === "all" ? "All Languages" : lang}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
-          </main>
+
+                {/* Room Stats */}
+                <div className="flex gap-4 flex-wrap">
+                  <Badge variant="secondary">{filteredRooms.length} rooms available</Badge>
+                  <Badge variant="secondary">
+                    {filteredRooms.filter(r => r.isLive).length} live now
+                  </Badge>
+                  <Badge variant="secondary">
+                    {filteredRooms.reduce((sum, r) => sum + r.participants, 0)} active participants
+                  </Badge>
+                </div>
+
+                {/* Rooms Grid */}
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredRooms.map((room) => (
+                    <RoomCard
+                      key={room.id}
+                      title={room.title}
+                      language={room.language}
+                      participants={room.participants}
+                      maxParticipants={room.maxParticipants}
+                      isLive={room.isLive}
+                      difficulty={room.difficulty}
+                      topic={room.topic}
+                    />
+                  ))}
+                </div>
+
+                {filteredRooms.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No rooms found matching your criteria.</p>
+                    <Button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="mt-4"
+                    >
+                      Create a New Room
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
         </div>
 
         {/* Floating Create Room Button */}
@@ -175,6 +177,8 @@ const Rooms = () => {
           isOpen={isCreateModalOpen} 
           onClose={() => setIsCreateModalOpen(false)} 
         />
+        
+        <Footer />
       </div>
     </ThemeProvider>
   );

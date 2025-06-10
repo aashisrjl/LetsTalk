@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { Footer } from "@/components/Footer";
 import { NotificationModal } from "@/components/NotificationModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,113 +97,115 @@ const Notifications = () => {
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
-      <div className="container min-h-screen bg-background text-foreground">
-        <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        
-        <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <div className="container mx-auto p-2">
+          <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
           
-          <main className="flex-1 p-4 lg:p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
-              {/* Page Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <Bell className="h-8 w-8" />
-                    Notifications
-                  </h1>
-                  <p className="text-muted-foreground mt-1">
-                    Stay updated with your language learning community
-                  </p>
-                </div>
-                
-                {unreadCount > 0 && (
-                  <Button onClick={markAllAsRead} variant="outline">
-                    Mark all as read ({unreadCount})
-                  </Button>
-                )}
-              </div>
-
-              {/* Notification Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Notification Preferences
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">Messages</Badge>
-                    <Badge variant="secondary">Friend Requests</Badge>
-                    <Badge variant="secondary">Session Reminders</Badge>
-                    <Badge variant="outline">Room Invitations</Badge>
-                    <Badge variant="outline">System Updates</Badge>
+          <div className="flex mt-4">
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            
+            <main className="flex-1 lg:ml-0">
+              <div className="p-4 lg:p-6">
+                {/* Page Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-3xl font-bold flex items-center gap-2">
+                      <Bell className="h-8 w-8" />
+                      Notifications
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                      Stay updated with your language learning community
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Click to enable/disable notification types
-                  </p>
-                </CardContent>
-              </Card>
+                  
+                  {unreadCount > 0 && (
+                    <Button onClick={markAllAsRead} variant="outline">
+                      Mark all as read ({unreadCount})
+                    </Button>
+                  )}
+                </div>
 
-              {/* Notifications List */}
-              <div className="space-y-3">
-                {notifications.length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-12">
-                      <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No notifications</h3>
-                      <p className="text-muted-foreground">You're all caught up!</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  notifications.map((notification) => {
-                    const Icon = notification.icon;
-                    return (
-                      <Card 
-                        key={notification.id} 
-                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                          !notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
-                        }`}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5">
-                              <Icon className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium">{notification.title}</h4>
-                                {!notification.read && (
-                                  <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                                )}
+                {/* Notification Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Notification Preferences
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">Messages</Badge>
+                      <Badge variant="secondary">Friend Requests</Badge>
+                      <Badge variant="secondary">Session Reminders</Badge>
+                      <Badge variant="outline">Room Invitations</Badge>
+                      <Badge variant="outline">System Updates</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Click to enable/disable notification types
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Notifications List */}
+                <div className="space-y-3">
+                  {notifications.length === 0 ? (
+                    <Card>
+                      <CardContent className="text-center py-12">
+                        <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No notifications</h3>
+                        <p className="text-muted-foreground">You're all caught up!</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    notifications.map((notification) => {
+                      const Icon = notification.icon;
+                      return (
+                        <Card 
+                          key={notification.id} 
+                          className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                            !notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
+                          }`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5">
+                                <Icon className="h-5 w-5 text-muted-foreground" />
                               </div>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {notification.description}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">
-                                  {notification.time}
-                                </span>
-                                <Badge 
-                                  variant="secondary" 
-                                  className={getTypeColor(notification.type)}
-                                >
-                                  {notification.type}
-                                </Badge>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium">{notification.title}</h4>
+                                  {!notification.read && (
+                                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {notification.description}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    {notification.time}
+                                  </span>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={getTypeColor(notification.type)}
+                                  >
+                                    {notification.type}
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
         </div>
 
         <NotificationModal
@@ -211,6 +214,8 @@ const Notifications = () => {
           notification={selectedNotification}
           onMarkAsRead={markAsRead}
         />
+        
+        <Footer />
       </div>
     </ThemeProvider>
   );
