@@ -60,17 +60,45 @@ socket.on("iceCandidate", ({ toSocketId, candidate }) => {
   socket.to(toSocketId).emit("iceCandidate", { fromSocketId: socket.id, candidate });
 });
 
-socket.on("leaveRoom", ({ roomId, userId }) => {
-  if (roomUsers[roomId]) {
-    roomUsers[roomId] = roomUsers[roomId].filter(u => u.userId !== userId);
-    io.to(roomId).emit("roomUsers", {
-      users: roomUsers[roomId],
-      ownerId: roomOwners[roomId],
-    });
-    socket.to(roomId).emit("userDisconnected", { userId });
-    socket.leave(roomId);
+
+socket.on("leaveRoom", async ({ roomId, userId }) => {
+  if (!roomUsers[roomId]) return;
+
+  // Remove user from memory
+  roomUsers[roomId] = roomUsers[roomId].filter(u => u.userId !== userId);
+
+  // Notify remaining users about the updated room list
+  io.to(roomId).emit("roomUsers", {
+    users: roomUsers[roomId],
+    ownerId: roomOwners[roomId],
+  });
+
+  try {
+    // Update the database
+    const room = await Room.findOne({ roomId });
+    if (room) {
+      room.participants.pull(userId);
+      await room.save();
+
+      // If no participants left, delete room
+      const isEmpty = roomUsers[roomId].length === 0;
+      if (isEmpty) {
+        await Room.deleteOne({ roomId });
+        delete roomUsers[roomId];
+        delete roomOwners[roomId];
+        console.log(`Room ${roomId} deleted because it's empty.`);
+      }
+    }
+  } catch (err) {
+    console.error("Error handling room cleanup:", err);
   }
+
+  // Notify other users that this user left
+  socket.to(roomId).emit("userDisconnected", { userId });
+  socket.leave(roomId);
 });
+
+
 
 socket.on("sendMessage", ({ message, userName, time }) => {
   socket.broadcast.to(socket.roomId).emit("receiveMessage", {
@@ -112,28 +140,50 @@ socket.on("sendMessage", ({ message, userName, time }) => {
       }
     });
 
-    // Handle user disconnect
-    socket.on('disconnect', () => {
-      const { roomId, userId } = socket;
-      if (!roomId || !roomUsers[roomId]) return;
+socket.on("disconnect", async () => {
+  const { roomId, userId } = socket;
+  if (!roomId || !roomUsers[roomId]) return;
 
-      roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
-      io.to(roomId).emit('roomUsers', {
-        users: roomUsers[roomId],
-        ownerId: roomOwners[roomId],
-      });
+  // Remove user from in-memory list
+  roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
 
-      io.to(roomId).emit('userLeft', { userId, socketId: socket.id });
+  io.to(roomId).emit("roomUsers", {
+    users: roomUsers[roomId],
+    ownerId: roomOwners[roomId],
+  });
 
-      // If owner leaves, you can optionally transfer ownership or delete the room
-      if (roomOwners[roomId] === userId) {
-        if (roomUsers[roomId].length > 0) {
-          roomOwners[roomId] = roomUsers[roomId][0].userId; // new owner
-        } else {
-          delete roomOwners[roomId];
-          delete roomUsers[roomId];
-        }
+  io.to(roomId).emit("userLeft", { userId, socketId: socket.id });
+
+  // Remove user from DB participants list
+  try {
+    const room = await Room.findOne({ roomId });
+    if (room) {
+      room.participants.pull(userId);
+      await room.save();
+
+      // Delete room if no participants left
+      if (room.participants.length === 0) {
+        await Room.deleteOne({ roomId });
+        delete roomOwners[roomId];
+        delete roomUsers[roomId];
+        console.log(`Room ${roomId} deleted because it's empty`);
       }
-    });
+    }
+  } catch (err) {
+    console.error("Error during DB cleanup on disconnect:", err);
+  }
+
+  // Transfer ownership if needed
+  if (roomOwners[roomId] === userId) {
+    if (roomUsers[roomId] && roomUsers[roomId].length > 0) {
+      roomOwners[roomId] = roomUsers[roomId][0].userId; // assign new owner
+    } else {
+      delete roomOwners[roomId];
+    }
+  }
+
+  socket.leave(roomId);
+});
+
   });
 };

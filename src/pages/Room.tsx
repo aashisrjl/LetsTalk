@@ -174,32 +174,35 @@ const Room = () => {
   }, [roomId, user._id]);
 
   const startLocalStream = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: isVideoEnabled,
-        audio: isAudioEnabled,
-      }).catch(err => {
-        console.error("Error accessing media devices:", err);
-        setError("Please allow camera and microphone access in your browser settings.");
-        return null;
-      });
-      if (stream && localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-        localStream.current = stream;
-        // Add tracks to existing peer connections
-        Object.values(peerConnections.current).forEach(pc => {
-          stream.getTracks().forEach(track => {
-            if (!pc.getSenders().some(sender => sender.track === track)) {
-              pc.addTrack(track, stream);
-            }
-          });
+  if (!isVideoEnabled && !isAudioEnabled) {
+    setError("Please enable either camera or microphone.");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: isVideoEnabled,
+      audio: isAudioEnabled,
+    });
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+      localStream.current = stream;
+
+      Object.values(peerConnections.current).forEach(pc => {
+        stream.getTracks().forEach(track => {
+          if (!pc.getSenders().some(sender => sender.track === track)) {
+            pc.addTrack(track, stream);
+          }
         });
-      }
-    } catch (err) {
-      console.error("Unexpected error accessing media devices:", err);
-      setError("Unexpected error accessing media devices. Please try again.");
+      });
     }
-  };
+  } catch (err) {
+    console.error("Error accessing media devices:", err);
+    setError("Please allow camera and microphone access in your browser settings.");
+  }
+};
+
 
   const createPeerConnection = (socketId, userId) => {
     const pc = new RTCPeerConnection(configuration);
@@ -279,25 +282,27 @@ const Room = () => {
       .catch(err => console.error("Error handling offer:", err));
   };
 
-  const toggleVideo = () => {
-    setIsVideoEnabled(!isVideoEnabled);
-    if (localStream.current) {
-      localStream.current.getVideoTracks().forEach(track => {
-        track.enabled = !isVideoEnabled;
-        if (!isVideoEnabled) track.stop(); // Stop the track when disabled
-      });
-    }
-  };
+const toggleVideo = () => {
+  const enabled = !isVideoEnabled;
+  setIsVideoEnabled(enabled);
+  if (localStream.current) {
+    localStream.current.getVideoTracks().forEach(track => {
+      track.enabled = enabled;
+    });
+  }
+};
 
-  const toggleAudio = () => {
-    setIsAudioEnabled(!isAudioEnabled);
-    if (localStream.current) {
-      localStream.current.getAudioTracks().forEach(track => {
-        track.enabled = !isAudioEnabled;
-        if (!isAudioEnabled) track.stop(); // Stop the track when disabled
-      });
-    }
-  };
+
+const toggleAudio = () => {
+  const enabled = !isAudioEnabled;
+  setIsAudioEnabled(enabled);
+  if (localStream.current) {
+    localStream.current.getAudioTracks().forEach(track => {
+      track.enabled = enabled;
+    });
+  }
+};
+
 
   const sendMessage = () => {
     if (message.trim() && socket.current) {
@@ -366,7 +371,7 @@ const Room = () => {
               <Card className="h-64 sm:h-80 lg:h-2/3">
                 <CardContent className="p-2 sm:p-4 h-full">
                   <div className="bg-gray-900 rounded-lg h-full flex items-center justify-center relative">
-                    <video ref={localVideoRef} className="w-full h-full object-cover rounded-lg" muted />
+                    <video ref={localVideoRef} className="w-full h-full object-cover rounded-lg" autoPlay playsInline muted />
                     <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex gap-1 sm:gap-2">
                       <Button
                         size="sm"

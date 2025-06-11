@@ -116,9 +116,10 @@ const Rooms = () => {
                   <Badge variant="secondary">
                     {filteredRooms.filter((r) => r.isLive).length} live now
                   </Badge>
-                  <Badge variant="secondary">
-                    {filteredRooms.reduce((sum, r) => sum + r.participants, 0)} active participants
-                  </Badge>
+                <Badge variant="secondary">
+  {filteredRooms.reduce((sum, r) => sum + (r.participants?.length || 0), 0)} active participants
+</Badge>
+
                 </div>
 
                 {/* Loading or Error State */}
@@ -142,7 +143,7 @@ const Rooms = () => {
                           key={room._id}
                           title={room.title}
                           language={room.language}
-                          participants={room.participants}
+                          participants={room.participants.length || 0}
                           maxParticipants={room.maxParticipants}
                           isLive={room.isLive}
                           difficulty={room.difficulty}
