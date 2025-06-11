@@ -1,53 +1,12 @@
+import { useEffect, useState } from "react";
 import { RoomCard } from "@/components/RoomCard";
 import { UserProfile } from "@/components/UserProfile";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Filter } from "lucide-react";
-
-const featuredRooms = [
-  {
-    id: 1,
-    title: "English Conversation Corner",
-    language: "English",
-    participants: 12,
-    maxParticipants: 20,
-    isLive: true,
-    difficulty: "Beginner",
-    topic: "Daily Life"
-  },
-  {
-    id: 2,
-    title: "Spanish Learning Circle",
-    language: "Spanish",
-    participants: 8,
-    maxParticipants: 15,
-    isLive: true,
-    difficulty: "Intermediate",
-    topic: "Grammar"
-  },
-  {
-    id: 3,
-    title: "French Culture Chat",
-    language: "French",
-    participants: 5,
-    maxParticipants: 10,
-    isLive: false,
-    difficulty: "Advanced",
-    topic: "Culture"
-  },
-  {
-    id: 4,
-    title: "Japanese Anime Discussion",
-    language: "Japanese",
-    participants: 15,
-    maxParticipants: 25,
-    isLive: true,
-    difficulty: "Intermediate",
-    topic: "Pop Culture"
-  },
-];
-
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 const trendingTopics = [
   "Business English",
   "Travel Phrases",
@@ -57,6 +16,24 @@ const trendingTopics = [
 ];
 
 export function Dashboard() {
+  const [featuredRooms, setFeaturedRooms] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchFeaturedRooms = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/rooms/featured");
+        if (response.data) {
+          setFeaturedRooms(response.data.rooms);
+        }
+      } catch (error) {
+        console.error("Failed to load featured rooms", error);
+      }
+    };
+
+    fetchFeaturedRooms();
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -87,8 +64,8 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input 
-            placeholder="Search rooms by language or topic..." 
+          <Input
+            placeholder="Search rooms by language or topic..."
             className="pl-10"
           />
         </div>
@@ -105,21 +82,25 @@ export function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Featured Rooms</h2>
-              <Button variant="outline">View All</Button>
+              <Button onClick={()=>{navigate('/rooms')}} variant="outline">View All</Button>
             </div>
             <div className="grid sm:grid-cols-2 gap-6">
-              {featuredRooms.map((room) => (
-                <RoomCard 
-                  key={room.id}
-                  title={room.title}
-                  language={room.language}
-                  participants={room.participants}
-                  maxParticipants={room.maxParticipants}
-                  isLive={room.isLive}
-                  difficulty={room.difficulty}
-                  topic={room.topic}
-                />
-              ))}
+              {Array.isArray(featuredRooms) && featuredRooms.length > 0 ? (
+                featuredRooms.map((room) => (
+                  <RoomCard
+                    key={room._id}
+                    title={room.title}
+                    language={room.language}
+                    participants={room.participants.length}
+                    maxParticipants={room.maxParticipants}
+                    isLive={room.isLive}
+                    difficulty={room.difficulty || "Beginner"}
+                    topic={room.topic}
+                  />
+                ))
+              ) : (
+                <p>No featured rooms available.</p>
+              )}
             </div>
           </section>
 
@@ -128,9 +109,9 @@ export function Dashboard() {
             <h2 className="text-2xl font-bold mb-6">Trending Topics</h2>
             <div className="flex flex-wrap gap-3">
               {trendingTopics.map((topic) => (
-                <Badge 
-                  key={topic} 
-                  variant="secondary" 
+                <Badge
+                  key={topic}
+                  variant="secondary"
                   className="px-4 py-2 text-sm hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
                 >
                   #{topic.replace(" ", "")}

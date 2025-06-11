@@ -63,6 +63,23 @@ exports.getLiveRooms = async (req, res) => {
   }
 };
 
+exports.getFeaturedRooms = async (req, res) => {
+  try {
+    const rooms = await Room.find({ isActive: true, private: false })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .populate('createdBy', 'name photo');
+
+    res.json({ success: true, rooms });
+  } catch (err) {
+    console.error('Recent featured rooms error:', err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+
+
+
 // Delete room (owner only)
 exports.deleteRoom = async (req, res) => {
   try {
