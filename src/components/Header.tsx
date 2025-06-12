@@ -1,18 +1,22 @@
-
-import { useEffect, useState, useRef } from "react";
-import { Bell, Menu, Settings, User, Coffee, LogIn } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Bell,
+  Menu,
+  Settings,
+  User,
+  Coffee,
+  LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+   DropdownMenuContent,
+   DropdownMenuItem,
+   DropdownMenuSeparator,
+   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate, useNavigation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { CoffeeModal } from "@/components/CoffeeModal";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { MessageSquare, UserPlus, Calendar } from "lucide-react";
@@ -23,6 +27,7 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const [user, setUser] = useState(null); // State to store user data
   const [showCoffeeModal, setShowCoffeeModal] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [notifications, setNotifications] = useState([
@@ -72,11 +77,30 @@ export function Header({ onMenuClick }: HeaderProps) {
       icon: Bell
     }
   ]);
-  
+
   const notificationRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const notificationCount = notifications.filter(n => !n.read).length;
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get('http://localhost:3000/auth/user', {
+          withCredentials: true, // Include cookies for authentication
+        });
+        if (res.status === 200 && res.data.success) {
+          setUser(res.data.user); // Set user data
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+        setUser(null); // Clear user if fetch fails (e.g., not logged in)
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -96,7 +120,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     try {
       const res = await axios.post(
         'http://localhost:3000/logout',
-        {}, // empty body
+        {},
         {
           withCredentials: true,
         }
@@ -104,10 +128,11 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       if (res.status === 200) {
         console.log('Logout successful');
+        setUser(null); // Clear user state
         window.location.href = 'http://localhost:8080/auth';
       }
     } catch (error) {
-      console.log('Error occurred', error);
+      console.error('Error during logout:', error);
     }
   };
 
@@ -116,15 +141,15 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   const handleMarkAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(notif => 
+    setNotifications(prev =>
+      prev.map(notif =>
         notif.id === id ? { ...notif, read: true } : notif
       )
     );
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(notif => ({ ...notif, read: true }))
     );
   };
@@ -142,7 +167,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            
+
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">FT</span>
@@ -163,18 +188,18 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Button>
 
             <ThemeToggle />
-            
+
             <div className="relative" ref={notificationRef}>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative"
                 onClick={handleNotificationClick}
               >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
                   >
                     {notificationCount}
@@ -191,21 +216,50 @@ export function Header({ onMenuClick }: HeaderProps) {
               )}
             </div>
 
-            <Button
-              variant="outline"
-              onClick={() => navigate('/auth')}
-              className="flex items-center gap-2"
-            >
-              <LogIn className="h-4 w-4" />
-              <span className="hidden sm:inline">Login</span>
-            </Button>
+            {/* Conditionally render Login button or User Avatar */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.photo} alt={user.name} />
+                      <AvatarFallback>{user.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span className="absolute -bottom-0 -right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/auth')}
+                className="flex items-center gap-2 bg-blue-400"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Login</span>
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
-      <CoffeeModal 
-        isOpen={showCoffeeModal} 
-        onClose={() => setShowCoffeeModal(false)} 
+      <CoffeeModal
+        isOpen={showCoffeeModal}
+        onClose={() => setShowCoffeeModal(false)}
       />
     </>
   );
