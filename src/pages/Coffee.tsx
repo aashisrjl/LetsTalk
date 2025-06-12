@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -6,7 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Coffee, Copy, CheckCircle, Smartphone, CreditCard, Heart, Star } from "lucide-react";
+import { Coffee, Copy, CheckCircle, Smartphone, CreditCard, Heart, Star, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CoffeePage = () => {
@@ -192,15 +193,32 @@ const CoffeePage = () => {
                   {/* QR Code Section */}
                   <Card className="mb-8">
                     <CardHeader>
-                      <CardTitle className="text-center">Quick Payment</CardTitle>
+                      <CardTitle className="text-center flex items-center justify-center gap-2">
+                        <QrCode className="h-6 w-6" />
+                        Quick Payment - eSewa QR Code
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-center">
-                        <div className="w-48 h-48 mx-auto bg-muted rounded-lg flex items-center justify-center mb-4">
-                          <p className="text-muted-foreground">QR Code Placeholder</p>
+                        <div className="w-64 h-64 mx-auto bg-muted rounded-lg flex items-center justify-center mb-4 border-2 border-dashed border-muted-foreground/30">
+                          <div className="text-center">
+                            <QrCode className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              eSewa Global Time & Time Pay
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              QR Code Coming Soon
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              (Placeholder - Will be replaced with actual QR code)
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Scan with your mobile banking app or eSewa for quick payment
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Scan with your eSewa app for quick and secure payment
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supports Global Time and Time Pay features
                         </p>
                       </div>
                     </CardContent>
