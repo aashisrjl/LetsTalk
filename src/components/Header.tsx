@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Bell, Menu, Settings, User, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate, useNavigation } from "react-router-dom";
 import { CoffeeModal } from "@/components/CoffeeModal";
-import { NotificationModal } from "@/components/NotificationModal";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { MessageSquare, UserPlus, Calendar } from "lucide-react";
 import axios from "axios";
 
@@ -23,11 +23,9 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const [notificationCount] = useState(3);
   const [showCoffeeModal, setShowCoffeeModal] = useState(false);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<any>(null);
-  const [notifications] = useState([
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       type: "message",
@@ -54,9 +52,45 @@ export function Header({ onMenuClick }: HeaderProps) {
       time: "3 hours ago",
       read: true,
       icon: Calendar
+    },
+    {
+      id: 4,
+      type: "message",
+      title: "Room invitation",
+      description: "You've been invited to 'Advanced English Discussion' room. Join now to start practicing!",
+      time: "1 day ago",
+      read: true,
+      icon: MessageSquare
+    },
+    {
+      id: 5,
+      type: "system",
+      title: "New feature available",
+      description: "Try our new AI-powered pronunciation checker to improve your speaking skills.",
+      time: "2 days ago",
+      read: true,
+      icon: Bell
     }
   ]);
+  
+  const notificationRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const notificationCount = notifications.filter(n => !n.read).length;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotificationDropdown(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -78,15 +112,21 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   const handleNotificationClick = () => {
-    if (notifications.length > 0) {
-      setSelectedNotification(notifications[0]); // Show first notification
-      setShowNotificationModal(true);
-    }
+    setShowNotificationDropdown(!showNotificationDropdown);
   };
 
   const handleMarkAsRead = (id: number) => {
-    // Handle marking notification as read
-    console.log('Marking notification as read:', id);
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
   };
 
   return (
@@ -124,22 +164,32 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             <ThemeToggle />
             
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              onClick={handleNotificationClick}
-            >
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
-                >
-                  {notificationCount}
-                </Badge>
+            <div className="relative" ref={notificationRef}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={handleNotificationClick}
+              >
+                <Bell className="h-5 w-5" />
+                {notificationCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
+                  >
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {showNotificationDropdown && (
+                <NotificationDropdown
+                  notifications={notifications}
+                  onMarkAsRead={handleMarkAsRead}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                />
               )}
-            </Button>
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -173,13 +223,6 @@ export function Header({ onMenuClick }: HeaderProps) {
       <CoffeeModal 
         isOpen={showCoffeeModal} 
         onClose={() => setShowCoffeeModal(false)} 
-      />
-
-      <NotificationModal
-        isOpen={showNotificationModal}
-        onClose={() => setShowNotificationModal(false)}
-        notification={selectedNotification}
-        onMarkAsRead={handleMarkAsRead}
       />
     </>
   );
