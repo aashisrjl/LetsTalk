@@ -170,9 +170,9 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">FT</span>
+                <span className="text-white font-bold text-sm">LT</span>
               </div>
-              <h1 className="text-xl font-bold hidden sm:block">FreeTalk</h1>
+              <h1 className="text-xl font-bold hidden sm:block">LetsTalk</h1>
             </div>
           </div>
 

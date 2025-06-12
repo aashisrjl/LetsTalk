@@ -11,12 +11,12 @@ export function Footer() {
               <span className="text-white font-bold text-xs">FT</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              FreeTalk - Connect with language learners worldwide
+              LetsTalk - Connect with language learners worldwide
             </span>
           </div>
           
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            Made with <Heart className="h-4 w-4 text-red-500" /> for language learners
+            Made with <Heart className="h-4 w-4 text-red-500" /> <a className="text-blue-700" href="http://aashishrijal.com.np" target="_blank">Aashis</a> for language learners
           </div>
         </div>
       </div>

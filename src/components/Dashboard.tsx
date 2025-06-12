@@ -39,7 +39,7 @@ export function Dashboard() {
       {/* Hero Section */}
       <div className="relative rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-8 text-white">
         <div className="relative z-10">
-          <h1 className="text-4xl font-bold mb-4">Welcome to FreeTalk</h1>
+          <h1 className="text-4xl font-bold mb-4">Welcome to LetsTalk</h1>
           <p className="text-xl opacity-90 mb-6">
             Connect with language learners worldwide and practice in real-time
           </p>
