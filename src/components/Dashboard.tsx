@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+
 const trendingTopics = [
   "Business English",
   "Travel Phrases",
@@ -17,21 +18,36 @@ const trendingTopics = [
 
 export function Dashboard() {
   const [featuredRooms, setFeaturedRooms] = useState([]);
+  const [activeUsers, setActiveUsers] = useState(0); // State for active users
+  const [liveRooms, setLiveRooms] = useState(0); // State for live rooms
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchFeaturedRooms = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/rooms/featured");
-        if (response.data) {
-          setFeaturedRooms(response.data.rooms);
+        // Fetch featured rooms
+        const roomsResponse = await axios.get("http://localhost:3000/rooms/featured");
+        if (roomsResponse.data) {
+          setFeaturedRooms(roomsResponse.data.rooms);
+        }
+
+        // Fetch total users
+        const usersResponse = await axios.get("http://localhost:3000/users/count");
+        if (usersResponse.data.success) {
+          setActiveUsers(usersResponse.data.count);
+        }
+
+        // Fetch total rooms
+        const roomsCountResponse = await axios.get("http://localhost:3000/rooms/count");
+        if (roomsCountResponse.data.success) {
+          setLiveRooms(roomsCountResponse.data.count);
         }
       } catch (error) {
-        console.error("Failed to load featured rooms", error);
+        console.error("Failed to load data", error);
       }
     };
 
-    fetchFeaturedRooms();
+    fetchData();
   }, []);
 
   return (
@@ -45,11 +61,11 @@ export function Dashboard() {
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <span className="text-2xl font-bold">2.5k+</span>
+              <span className="text-2xl font-bold">{activeUsers}+</span>
               <span className="text-sm">Active Users</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <span className="text-2xl font-bold">150+</span>
+              <span className="text-2xl font-bold">{liveRooms}+</span>
               <span className="text-sm">Live Rooms</span>
             </div>
             <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
@@ -82,7 +98,7 @@ export function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Featured Rooms</h2>
-              <Button onClick={()=>{navigate('/rooms')}} variant="outline">View All</Button>
+              <Button onClick={() => navigate('/rooms')} variant="outline">View All</Button>
             </div>
             <div className="grid sm:grid-cols-2 gap-6">
               {Array.isArray(featuredRooms) && featuredRooms.length > 0 ? (

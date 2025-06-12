@@ -34,7 +34,7 @@ exports.createRoom = async (req, res) => {
 // Get all public rooms
 exports.getPublicRooms = async (req, res) => {
   try {
-    const rooms = await Room.find({ private: false, isActive: true }).populate('createdBy', 'name');
+    const rooms = await Room.find({ private: false, isActive: true }).populate('participants', 'photo rating name');
     res.json({ success: true, rooms });
   } catch (err) {
     console.error('Get rooms error:', err);
@@ -95,6 +95,17 @@ exports.deleteRoom = async (req, res) => {
     res.json({ success: true, message: 'Room deleted' });
   } catch (err) {
     console.error('Delete room error:', err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+//count all rooms
+exports.countAllRooms = async (req, res) => {
+  try {
+    const count = await Room.countDocuments();
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('Count rooms error:', err);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

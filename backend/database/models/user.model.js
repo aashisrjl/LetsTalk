@@ -4,8 +4,7 @@ const languageSchema = new mongoose.Schema({
   name: { type: String, required: true },
   level: { 
     type: String, 
-    enum: ['beginner', 'intermediate', 'advanced', 'native'],
-    default: 'beginner'
+    default: 'english'
   }
 });
 
@@ -25,19 +24,13 @@ const userSchema = new mongoose.Schema({
   email: String,
   photo: String,            // Profile photo URL
 
-  bio: String,
-  location: String,
-
-  nativeLanguages: [languageSchema],
-  learningLanguages: [languageSchema],
-
   joinDate: {
     type: Date,
     default: Date.now,
   },
 
   // Stats
-  rating: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
   sessions: { type: Number, default: 0 },
   stats: {
     weeklySessions: { type: Number, default: 0 },
@@ -63,6 +56,35 @@ const userSchema = new mongoose.Schema({
     darkMode: { type: Boolean, default: false },
     language: { type: String, default: 'en' },
   },
+  recentActivity:[
+    {
+      type: {
+        type: String, // e.g., 'session', 'message', 'profileUpdate'
+        required: true
+      },
+      timestamp: { type: Date, default: Date.now },
+      details: String // Additional details about the activity
+    }
+  ],
+  bio:{
+    type: String,
+    maxlength: 500, // Limit bio length
+    default: 'Language enthusiast passionate about connecting cultures through conversation.'
+  },
+  location: {
+    type: String,
+    maxlength: 100, // Limit location length
+    default: 'Global Citizen'
+  },
+  nativeLanguages: [{
+    type: languageSchema,
+    required: true
+  }],
+  learningLanguages: [{
+    type: languageSchema,
+    required: true
+  }],
+  likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
 module.exports = mongoose.model('User', userSchema);    

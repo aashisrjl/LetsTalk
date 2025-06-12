@@ -2,13 +2,17 @@
 const express = require('express');
 const passport = require('../services/passport');
 const generateToken = require('../utils/jwt');
-const { getUserProfile, getUserById } = require('../controller/user.controller');
+const { getUserProfile, getUserById, updateUserProfile, getUserProfileData, countAllUsers, likeUser } = require('../controller/user.controller');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
 
+router.post("/users/:userId/likes",isAuthenticated,likeUser)
+router.get("/users/count", countAllUsers);
+router.patch('/users/:id',isAuthenticated,updateUserProfile);
 router.get('/users/:id', isAuthenticated, getUserById);
 
 router.get('/auth/user',isAuthenticated,getUserProfile );
+router.get('/auth/user-data',isAuthenticated,getUserProfileData );
 // Google callback
 router.get('/auth/google',
   passport.authenticate('google', {

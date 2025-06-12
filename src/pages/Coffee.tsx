@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -9,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Coffee, Copy, CheckCircle, Smartphone, CreditCard, Heart, Star, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+// Import the QR code images
+import esewaQR from "@/assets/esewa.png";
+import bankQR from "@/assets/bank.png";
 
 const CoffeePage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -17,15 +19,15 @@ const CoffeePage = () => {
 
   const paymentMethods = {
     esewa: {
-      name: "eSewa",
-      id: "9841234567",
+      name: "eSewa/khalti/ImePay",
+      id: "9847749997",
       icon: CreditCard,
       color: "text-green-600"
     },
     mobileBanking: {
       name: "Mobile Banking",
-      account: "01-12-345678-90",
-      bank: "Nepal Investment Bank",
+      account: "240070100002196",
+      bank: "Global IME Bank Ltd",
       icon: Smartphone,
       color: "text-blue-600"
     }
@@ -70,7 +72,7 @@ const CoffeePage = () => {
                       <h1 className="text-4xl font-bold">Buy me a coffee ☕</h1>
                     </div>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                      Support the development of FreeTalk and help keep this language learning platform running and improving for everyone.
+                      Support the development of LetsTalk and help keep this language learning platform running and improving for everyone.
                     </p>
                   </div>
 
@@ -90,7 +92,7 @@ const CoffeePage = () => {
                           </div>
                           <h3 className="font-semibold mb-2">Server Costs</h3>
                           <p className="text-sm text-muted-foreground">
-                            Help cover hosting and infrastructure costs to keep FreeTalk running smoothly 24/7.
+                            Help cover hosting and infrastructure costs to keep LetsTalk running smoothly 24/7.
                           </p>
                         </div>
                         <div className="text-center">
@@ -145,7 +147,7 @@ const CoffeePage = () => {
                             </Button>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Send any amount to support FreeTalk development. Every contribution helps!
+                            Send any amount to support LetsTalk development. Every contribution helps!
                           </p>
                         </div>
                       </CardContent>
@@ -195,30 +197,43 @@ const CoffeePage = () => {
                     <CardHeader>
                       <CardTitle className="text-center flex items-center justify-center gap-2">
                         <QrCode className="h-6 w-6" />
-                        Quick Payment - eSewa QR Code
+                        Quick Payment - QR Codes
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-center">
-                        <div className="w-64 h-64 mx-auto bg-muted rounded-lg flex items-center justify-center mb-4 border-2 border-dashed border-muted-foreground/30">
-                          <div className="text-center">
-                            <QrCode className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                        <div className="grid md:grid-cols-2 gap-6 max-w-lg mx-auto">
+                          {/* eSewa QR Code */}
+                          <div>
+                            <img
+                              src={esewaQR}
+                              alt="eSewa QR Code"
+                              className="w-48 h-60 mx-auto mb-4 rounded-lg border-2 border-dashed border-muted-foreground/30"
+                            />
                             <p className="text-sm font-medium text-muted-foreground mb-2">
-                              eSewa Global Time & Time Pay
+                              eSewa QR Code
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              QR Code Coming Soon
+                              Scan with your eSewa app
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              (Placeholder - Will be replaced with actual QR code)
+                          </div>
+                          {/* Global IME Bank QR Code */}
+                          <div>
+                            <img
+                              src={bankQR}
+                              alt="Global IME Bank QR Code"
+                              className="w-48 h-60 mx-auto mb-4 rounded-lg border-2 border-dashed border-muted-foreground/30"
+                            />
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              Global IME Bank QR Code
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Scan with your mobile banking app
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Scan with your eSewa app for quick and secure payment
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Supports Global Time and Time Pay features
+                        <p className="text-sm text-muted-foreground mt-4">
+                          Scan the appropriate QR code with your eSewa or mobile banking app for quick and secure payment.
                         </p>
                       </div>
                     </CardContent>
@@ -233,7 +248,7 @@ const CoffeePage = () => {
                         <Heart className="h-6 w-6 text-red-500" />
                       </div>
                       <p className="text-muted-foreground mb-4">
-                        Your support means the world to us and helps keep FreeTalk free for everyone.
+                        Your support means the world to us and helps keep LetsTalk free for everyone.
                       </p>
                       <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
                         <span>✨ Made with love for language learners</span>

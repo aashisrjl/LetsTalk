@@ -4,7 +4,6 @@ const roomSchema = new mongoose.Schema({
   roomId: { type: String, required: true, unique: true }, // e.g., CR947
 
   title: { type: String, required: true },
-  topic: { type: String, default: "Let's talk" },
   description: { type: String },
 
   language: { type: String, required: true },
@@ -14,6 +13,10 @@ const roomSchema = new mongoose.Schema({
   private: { type: Boolean, default: false },
 
   tags: [{ type: String }],
+  
+  level: { type: String,
+    enum: ['beginner', 'intermediate', 'advanced'],
+    default: 'beginner' }, // beginner, intermediate, advanced
 
   isLive: { type: Boolean, default: true },
   isActive: { type: Boolean, default: true },

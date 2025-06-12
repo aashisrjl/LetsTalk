@@ -180,7 +180,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowCoffeeModal(true)}
+              onClick={() => navigate('/buy-me-coffee')}
               className="relative"
               title="Buy me a coffee"
             >
@@ -257,10 +257,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       </header>
 
-      <CoffeeModal
-        isOpen={showCoffeeModal}
-        onClose={() => setShowCoffeeModal(false)}
-      />
     </>
   );
 }

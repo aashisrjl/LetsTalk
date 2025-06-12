@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -11,27 +10,34 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Settings as SettingsIcon, 
-  User, 
-  Bell, 
-  Shield, 
-  Globe, 
+import {
+  Settings as SettingsIcon,
+  User,
+  Bell,
+  Shield,
+  Globe,
   Palette,
   Volume2,
   Camera,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 const Settings = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [languageModalType, setLanguageModalType] = useState<
+    "native" | "learning" | null
+  >(null);
+  const [newLanguage, setNewLanguage] = useState("");
+
   const [profileSettings, setProfileSettings] = useState({
-    displayName: "John Doe",
-    bio: "Language enthusiast passionate about connecting cultures through conversation.",
-    location: "New York, USA",
-    nativeLanguages: ["English"],
-    learningLanguages: ["Spanish", "French"]
+    displayName: "",
+    bio: "",
+    location: "",
+    nativeLanguages: [],
+    learningLanguages: [],
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -40,14 +46,14 @@ const Settings = () => {
     sessionReminders: true,
     roomInvitations: false,
     systemUpdates: true,
-    emailNotifications: false
+    emailNotifications: false,
   });
 
   const [privacySettings, setPrivacySettings] = useState({
     profileVisibility: "public",
     showOnlineStatus: true,
     allowDirectMessages: true,
-    showLanguageProgress: true
+    showLanguageProgress: true,
   });
 
   const [audioSettings, setAudioSettings] = useState({
@@ -55,17 +61,93 @@ const Settings = () => {
     cameraEnabled: true,
     audioQuality: "high",
     echoCancellation: true,
-    noiseSuppression: true
+    noiseSuppression: true,
   });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/auth/user-data",
+          {
+            withCredentials: true,
+          }
+        );
+
+        const data = response.data;
+
+        if (data.success) {
+          setProfileSettings({
+            displayName: data.user.name || "",
+            bio: data.user.bio || "",
+            location: data.user.location || "",
+            nativeLanguages:
+              data.user.nativeLanguages.map((lang) => lang.name) || [],
+            learningLanguages:
+              data.user.learningLanguages.map((lang) => lang.name) || [],
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchUserData();
+  }, [toast]);
+  const handleSaveProfile = async () => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:3000/users/${profileSettings._id}`,
+        {
+          displayName: profileSettings.displayName,
+          bio: profileSettings.bio,
+          location: profileSettings.location,
+          nativeLanguages: profileSettings.nativeLanguages.map((lang) => ({
+            name: lang,
+            level: lang.toLowerCase(),
+          })),
+          learningLanguages: profileSettings.learningLanguages.map((lang) => ({
+            name: lang,
+            level: lang.toLowerCase(),
+          })),
+        },
+        {
+          withCredentials: true, // Include cookies for authentication
+        }
+      );
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
       <div className="container min-h-screen bg-background text-foreground">
         <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        
+
         <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-          
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+
           <main className="flex-1 p-2 sm:p-4 lg:p-6">
             <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
               {/* Page Header */}
@@ -81,11 +163,36 @@ const Settings = () => {
 
               <Tabs defaultValue="profile" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto p-1">
-                  <TabsTrigger value="profile" className="text-xs sm:text-sm py-2">Profile</TabsTrigger>
-                  <TabsTrigger value="notifications" className="text-xs sm:text-sm py-2">Notifications</TabsTrigger>
-                  <TabsTrigger value="privacy" className="text-xs sm:text-sm py-2">Privacy</TabsTrigger>
-                  <TabsTrigger value="audio" className="text-xs sm:text-sm py-2">Audio/Video</TabsTrigger>
-                  <TabsTrigger value="appearance" className="text-xs sm:text-sm py-2">Appearance</TabsTrigger>
+                  <TabsTrigger
+                    value="profile"
+                    className="text-xs sm:text-sm py-2"
+                  >
+                    Profile
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="notifications"
+                    className="text-xs sm:text-sm py-2"
+                  >
+                    Notifications
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="privacy"
+                    className="text-xs sm:text-sm py-2"
+                  >
+                    Privacy
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="audio"
+                    className="text-xs sm:text-sm py-2"
+                  >
+                    Audio/Video
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="appearance"
+                    className="text-xs sm:text-sm py-2"
+                  >
+                    Appearance
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Profile Settings */}
@@ -99,40 +206,52 @@ const Settings = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="displayName" className="text-sm">Display Name</Label>
+                        <Label htmlFor="displayName" className="text-sm">
+                          Display Name
+                        </Label>
                         <Input
                           id="displayName"
                           value={profileSettings.displayName}
-                          onChange={(e) => setProfileSettings(prev => ({
-                            ...prev,
-                            displayName: e.target.value
-                          }))}
+                          onChange={(e) =>
+                            setProfileSettings((prev) => ({
+                              ...prev,
+                              displayName: e.target.value,
+                            }))
+                          }
                           className="text-sm"
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="bio" className="text-sm">Bio</Label>
+                        <Label htmlFor="bio" className="text-sm">
+                          Bio
+                        </Label>
                         <Textarea
                           id="bio"
                           value={profileSettings.bio}
-                          onChange={(e) => setProfileSettings(prev => ({
-                            ...prev,
-                            bio: e.target.value
-                          }))}
+                          onChange={(e) =>
+                            setProfileSettings((prev) => ({
+                              ...prev,
+                              bio: e.target.value,
+                            }))
+                          }
                           className="min-h-[80px] sm:min-h-[100px] text-sm"
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="location" className="text-sm">Location</Label>
+                        <Label htmlFor="location" className="text-sm">
+                          Location
+                        </Label>
                         <Input
                           id="location"
                           value={profileSettings.location}
-                          onChange={(e) => setProfileSettings(prev => ({
-                            ...prev,
-                            location: e.target.value
-                          }))}
+                          onChange={(e) =>
+                            setProfileSettings((prev) => ({
+                              ...prev,
+                              location: e.target.value,
+                            }))
+                          }
                           className="text-sm"
                         />
                       </div>
@@ -140,34 +259,67 @@ const Settings = () => {
                       <div className="space-y-2">
                         <Label className="text-sm">Native Languages</Label>
                         <div className="flex flex-wrap gap-2">
-                          {profileSettings.nativeLanguages.map((lang, index) => (
-                            <Badge key={index} className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
-                              {lang}
-                            </Badge>
-                          ))}
-                          <Button variant="outline" size="sm" className="text-xs h-6">Add Language</Button>
+                          {profileSettings.nativeLanguages.map(
+                            (lang, index) => (
+                              <Badge
+                                key={index}
+                                className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs"
+                              >
+                                {lang}
+                              </Badge>
+                            )
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-6"
+                            onClick={() => setLanguageModalType("native")}
+                          >
+                            Add Language
+                          </Button>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label className="text-sm">Learning Languages</Label>
                         <div className="flex flex-wrap gap-2">
-                          {profileSettings.learningLanguages.map((lang, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {lang}
-                            </Badge>
-                          ))}
-                          <Button variant="outline" size="sm" className="text-xs h-6">Add Language</Button>
+                          {profileSettings.learningLanguages.map(
+                            (lang, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {lang}
+                              </Badge>
+                            )
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-6"
+                            onClick={() => setLanguageModalType("learning")}
+                          >
+                            Add Language
+                          </Button>
                         </div>
                       </div>
 
-                      <Button className="w-full sm:w-auto">Save Profile Changes</Button>
+                      <Button
+                        className="w-full sm:w-auto"
+                        onClick={handleSaveProfile}
+                      >
+                        Save Profile Changes
+                      </Button>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 {/* Notification Settings */}
-                <TabsContent value="notifications" className="space-y-4 sm:space-y-6">
+                <TabsContent
+                  value="notifications"
+                  className="space-y-4 sm:space-y-6"
+                >
                   <Card>
                     <CardHeader className="pb-4">
                       <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -176,23 +328,31 @@ const Settings = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {Object.entries(notificationSettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between py-2">
-                          <Label htmlFor={key} className="capitalize text-sm sm:text-base flex-1 pr-4">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </Label>
-                          <Switch
-                            id={key}
-                            checked={value}
-                            onCheckedChange={(checked) => 
-                              setNotificationSettings(prev => ({
-                                ...prev,
-                                [key]: checked
-                              }))
-                            }
-                          />
-                        </div>
-                      ))}
+                      {Object.entries(notificationSettings).map(
+                        ([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between py-2"
+                          >
+                            <Label
+                              htmlFor={key}
+                              className="capitalize text-sm sm:text-base flex-1 pr-4"
+                            >
+                              {key.replace(/([A-Z])/g, " $1").trim()}
+                            </Label>
+                            <Switch
+                              id={key}
+                              checked={value}
+                              onCheckedChange={(checked) =>
+                                setNotificationSettings((prev) => ({
+                                  ...prev,
+                                  [key]: checked,
+                                }))
+                              }
+                            />
+                          </div>
+                        )
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -208,27 +368,35 @@ const Settings = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {Object.entries(privacySettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between py-2">
-                          <Label htmlFor={key} className="capitalize text-sm sm:text-base flex-1 pr-4">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                        <div
+                          key={key}
+                          className="flex items-center justify-between py-2"
+                        >
+                          <Label
+                            htmlFor={key}
+                            className="capitalize text-sm sm:text-base flex-1 pr-4"
+                          >
+                            {key.replace(/([A-Z])/g, " $1").trim()}
                           </Label>
-                          {typeof value === 'boolean' ? (
+                          {typeof value === "boolean" ? (
                             <Switch
                               id={key}
                               checked={value}
-                              onCheckedChange={(checked) => 
-                                setPrivacySettings(prev => ({
+                              onCheckedChange={(checked) =>
+                                setPrivacySettings((prev) => ({
                                   ...prev,
-                                  [key]: checked
+                                  [key]: checked,
                                 }))
                               }
                             />
                           ) : (
-                            <Badge variant="secondary" className="text-xs">{value}</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {value}
+                            </Badge>
                           )}
                         </div>
                       ))}
-                      
+
                       <div className="pt-4 border-t">
                         <Button variant="destructive" className="w-full">
                           <Trash2 className="h-4 w-4 mr-2" />
@@ -252,14 +420,16 @@ const Settings = () => {
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2 flex-1 pr-4">
                           <Volume2 className="h-4 w-4" />
-                          <Label className="text-sm sm:text-base">Microphone Access</Label>
+                          <Label className="text-sm sm:text-base">
+                            Microphone Access
+                          </Label>
                         </div>
                         <Switch
                           checked={audioSettings.microphoneEnabled}
-                          onCheckedChange={(checked) => 
-                            setAudioSettings(prev => ({
+                          onCheckedChange={(checked) =>
+                            setAudioSettings((prev) => ({
                               ...prev,
-                              microphoneEnabled: checked
+                              microphoneEnabled: checked,
                             }))
                           }
                         />
@@ -268,52 +438,63 @@ const Settings = () => {
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2 flex-1 pr-4">
                           <Camera className="h-4 w-4" />
-                          <Label className="text-sm sm:text-base">Camera Access</Label>
+                          <Label className="text-sm sm:text-base">
+                            Camera Access
+                          </Label>
                         </div>
                         <Switch
                           checked={audioSettings.cameraEnabled}
-                          onCheckedChange={(checked) => 
-                            setAudioSettings(prev => ({
+                          onCheckedChange={(checked) =>
+                            setAudioSettings((prev) => ({
                               ...prev,
-                              cameraEnabled: checked
+                              cameraEnabled: checked,
                             }))
                           }
                         />
                       </div>
 
                       <div className="flex items-center justify-between py-2">
-                        <Label className="text-sm sm:text-base flex-1 pr-4">Echo Cancellation</Label>
+                        <Label className="text-sm sm:text-base flex-1 pr-4">
+                          Echo Cancellation
+                        </Label>
                         <Switch
                           checked={audioSettings.echoCancellation}
-                          onCheckedChange={(checked) => 
-                            setAudioSettings(prev => ({
+                          onCheckedChange={(checked) =>
+                            setAudioSettings((prev) => ({
                               ...prev,
-                              echoCancellation: checked
+                              echoCancellation: checked,
                             }))
                           }
                         />
                       </div>
 
                       <div className="flex items-center justify-between py-2">
-                        <Label className="text-sm sm:text-base flex-1 pr-4">Noise Suppression</Label>
+                        <Label className="text-sm sm:text-base flex-1 pr-4">
+                          Noise Suppression
+                        </Label>
                         <Switch
                           checked={audioSettings.noiseSuppression}
-                          onCheckedChange={(checked) => 
-                            setAudioSettings(prev => ({
+                          onCheckedChange={(checked) =>
+                            setAudioSettings((prev) => ({
                               ...prev,
-                              noiseSuppression: checked
+                              noiseSuppression: checked,
                             }))
                           }
                         />
                       </div>
 
-                      <Button className="w-full sm:w-auto">Test Audio/Video</Button>
+                      <Button className="w-full sm:w-auto">
+                        Test Audio/Video
+                      </Button>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 {/* Appearance Settings */}
-                <TabsContent value="appearance" className="space-y-4 sm:space-y-6">
+                <TabsContent
+                  value="appearance"
+                  className="space-y-4 sm:space-y-6"
+                >
                   <Card>
                     <CardHeader className="pb-4">
                       <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -330,17 +511,39 @@ const Settings = () => {
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2 flex-1 pr-4">
                           <Globe className="h-4 w-4" />
-                          <Label className="text-sm sm:text-base">App Language</Label>
+                          <Label className="text-sm sm:text-base">
+                            App Language
+                          </Label>
                         </div>
-                        <Badge variant="secondary" className="text-xs">English</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          English
+                        </Badge>
                       </div>
 
                       <div className="space-y-2">
                         <Label className="text-sm">Font Size</Label>
                         <div className="flex gap-2 flex-wrap">
-                          <Button variant="outline" size="sm" className="text-xs">Small</Button>
-                          <Button variant="secondary" size="sm" className="text-xs">Medium</Button>
-                          <Button variant="outline" size="sm" className="text-xs">Large</Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            Small
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            Medium
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            Large
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -351,6 +554,56 @@ const Settings = () => {
           </main>
         </div>
       </div>
+      {languageModalType && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+    <div className="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-lg w-80 space-y-4">
+      <h2 className="text-lg font-semibold">
+        Add {languageModalType === "native" ? "Native" : "Learning"} Language
+      </h2>
+      <Input
+        placeholder="Type a language (e.g., English)"
+        value={newLanguage}
+        onChange={(e) => setNewLanguage(e.target.value)}
+      />
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setNewLanguage("");
+            setLanguageModalType(null);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={() => {
+            const trimmed = newLanguage.trim();
+            if (trimmed) {
+              setProfileSettings((prev) => ({
+                ...prev,
+                [languageModalType === "native"
+                  ? "nativeLanguages"
+                  : "learningLanguages"]: [
+                  ...prev[
+                    languageModalType === "native"
+                      ? "nativeLanguages"
+                      : "learningLanguages"
+                  ],
+                  trimmed,
+                ],
+              }));
+              setNewLanguage("");
+              setLanguageModalType(null);
+            }
+          }}
+        >
+          Add
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
+
     </ThemeProvider>
   );
 };

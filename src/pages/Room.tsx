@@ -176,7 +176,7 @@ const Room = () => {
   const startLocalStream = async () => {
   if (!isVideoEnabled && !isAudioEnabled) {
     setError("Please enable either camera or microphone.");
-    return;
+    // return;  -----------------------------------------------------
   }
 
   try {
@@ -401,7 +401,7 @@ const toggleAudio = () => {
                     <Card key={participant._id}>
                       <CardContent className="p-1 sm:p-2 h-full">
                         <div className="bg-gray-800 rounded h-full flex items-center justify-center relative">
-                          <video ref={el => (remoteVideoRefs.current[participant._id] = el)} className="w-full h-full object-cover rounded-lg" />
+                          <video ref={el => (remoteVideoRefs.current[participant._id] = el)} className="w-full h-full object-cover rounded-lg" autoPlay playsInline muted />
                           <div className="absolute bottom-1 right-1 flex gap-1">
                             {participant.video ? (
                               <Video className="h-2 w-2 sm:h-3 sm:w-3 text-green-400" />

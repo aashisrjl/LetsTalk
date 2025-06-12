@@ -53,6 +53,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     maxParticipants: "10",
     isPrivate: false,
     tags: [] as string[],
+    level: "beginner", // Added default level
   });
 
   const [newTag, setNewTag] = useState("");
@@ -87,6 +88,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         maxParticipants: parseInt(roomData.maxParticipants),
         private: roomData.isPrivate,
         tags: roomData.tags,
+        level: roomData.level, // Added level to payload
         supports: ["video", "audio", "text"],
         topic: "General",
       };
@@ -175,6 +177,26 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                     {lang}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Level Select */}
+          <div>
+            <Label htmlFor="level">Difficulty Level</Label>
+            <Select
+              value={roomData.level}
+              onValueChange={(value) =>
+                setRoomData((prev) => ({ ...prev, level: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select difficulty level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
               </SelectContent>
             </Select>
           </div>

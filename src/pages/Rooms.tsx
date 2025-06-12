@@ -3,7 +3,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Footer } from "@/components/Footer";
-import { RoomCard } from "@/components/RoomCard";
+import { RoomCard } from "@/components/RoomCard"; // Ensure RoomCard is updated
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,42 +27,55 @@ const Rooms = () => {
   const [loading, setLoading] = useState(true); // Loading state
   const [error, setError] = useState(null); // Error state
 
-  const languages = ["all", "English", "Spanish", "French", "Japanese", "German", "Italian"];
+  const languages = [
+    "all",
+    "English",
+    "Spanish",
+    "French",
+    "Japanese",
+    "German",
+    "Italian",
+  ];
 
-  // Fetch live rooms from the API
+  // Fetch public rooms from the API
   useEffect(() => {
-    const fetchLiveRooms = async () => {
+    const fetchPublicRooms = async () => {
       try {
         const response = await axios.get("http://localhost:3000/rooms", {
-          
+          // Updated to use /rooms/public endpoint
         });
-        setRooms(response.data.rooms); // Assuming the API returns an array of rooms
+        if (response.data.success) {
+          setRooms(response.data.rooms || []); // Rooms should include populated participants
+        } else {
+          setError("Failed to fetch rooms: No data returned.");
+        }
       } catch (err) {
-        setError("Failed to fetch live rooms. Please try again later.");
-        console.error("Error fetching live rooms:", err);
+        setError("Failed to fetch public rooms. Please try again later.");
+        console.error("Error fetching public rooms:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLiveRooms();
+    fetchPublicRooms();
   }, []); // Empty dependency array means it runs once on mount
 
- const filteredRooms = rooms.filter((room) => {
-  // Check if room is defined and has the required properties
-  if (!room || typeof room !== 'object') return false;
+  const filteredRooms = rooms.filter((room) => {
+    if (!room || typeof room !== "object") return false;
 
-  const title = room.title || '';
-  const topic = room.topic || '';
-  const language = room.language || '';
+    const title = room.title || "";
+    const language = room.language || "";
+    const description = room.description || "";
+    const level = room.level || "";
 
-  const matchesSearch = (
-    title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    topic.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const matchesLanguage = selectedLanguage === "all" || language === selectedLanguage;
-  return matchesSearch && matchesLanguage;
-});
+    const matchesSearch =
+      title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      level.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesLanguage =
+      selectedLanguage === "all" || language === selectedLanguage;
+    return matchesSearch && matchesLanguage;
+  });
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
@@ -71,7 +84,10 @@ const Rooms = () => {
           <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
           <div className="flex mt-4">
-            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+            />
 
             <main className="flex-1 lg:ml-0">
               <div className="p-4 lg:p-6">
@@ -79,7 +95,9 @@ const Rooms = () => {
                 <div className="flex flex-col gap-4">
                   <h1 className="text-3xl font-bold">Language Rooms</h1>
                   <p className="text-muted-foreground">
-                    Join conversations and practice languages with speakers from around the world. All rooms support video, voice, and text chat.
+                    Join conversations and practice languages with speakers from
+                    around the world. All rooms support video, voice, and text
+                    chat.
                   </p>
                 </div>
 
@@ -95,7 +113,10 @@ const Rooms = () => {
                     />
                   </div>
 
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                  <Select
+                    value={selectedLanguage}
+                    onValueChange={setSelectedLanguage}
+                  >
                     <SelectTrigger className="w-full sm:w-48">
                       <Filter className="h-4 w-4 mr-2" />
                       <SelectValue placeholder="Filter by language" />
@@ -112,14 +133,19 @@ const Rooms = () => {
 
                 {/* Room Stats */}
                 <div className="flex gap-4 flex-wrap">
-                  <Badge variant="secondary">{filteredRooms.length} rooms available</Badge>
+                  <Badge variant="secondary">
+                    {filteredRooms.length} rooms available
+                  </Badge>
                   <Badge variant="secondary">
                     {filteredRooms.filter((r) => r.isLive).length} live now
                   </Badge>
-                <Badge variant="secondary">
-  {filteredRooms.reduce((sum, r) => sum + (r.participants?.length || 0), 0)} active participants
-</Badge>
-
+                  <Badge variant="secondary">
+                    {filteredRooms.reduce(
+                      (sum, r) => sum + (r.participants?.length || 0),
+                      0
+                    )}{" "}
+                    active participants
+                  </Badge>
                 </div>
 
                 {/* Loading or Error State */}
@@ -130,7 +156,10 @@ const Rooms = () => {
                 ) : error ? (
                   <div className="text-center py-12">
                     <p className="text-red-500">{error}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">
+                    <Button
+                      onClick={() => window.location.reload()}
+                      className="mt-4"
+                    >
                       Retry
                     </Button>
                   </div>
@@ -142,24 +171,33 @@ const Rooms = () => {
                         <RoomCard
                           key={room._id}
                           title={room.title}
-                          language={room.language}
-                          participants={room.participants.length || 0}
-                          maxParticipants={room.maxParticipants}
-                          isLive={room.isLive}
-                          difficulty={room.difficulty}
-                          topic={room.topic}
+                          description={room.description || ""}
+                          level={room.level || "beginner"}
+                          language={room.language || ""} // Added language prop
+                          participants={room.participants.map((p) => ({
+                            id: p._id,
+                            photo: p.photo, // Assuming populated
+                            rating: p.rating, // Assuming populated
+                            name: p.name, // Added name
+                          }))} // Updated to include name
+                          maxParticipants={room.maxParticipants || 10}
+                          isLive={room.isLive || false}
                           roomId={room.roomId}
                         />
                       ))
                     ) : (
-                      <div className="text-center py-12">
-                        <p className="text-muted-foreground">No rooms found matching your criteria.</p>
-                        <Button
-                          onClick={() => setIsCreateModalOpen(true)}
-                          className="mt-4"
-                        >
-                          Create a New Room
-                        </Button>
+                      <div className="flex justify-center align-center text-center ml-[30rem] mt-20">
+                        <div className="text-center py-12 ">
+                          <p className="text-muted-foreground">
+                            No rooms found matching your criteria.
+                          </p>
+                          <Button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="mt-4"
+                          >
+                            Create a New Room
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
