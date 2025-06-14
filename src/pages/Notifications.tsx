@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -8,82 +9,60 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, MessageSquare, UserPlus, Calendar, Settings } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const Notifications = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "message",
-      title: "New message from Maria",
-      description: "Thanks for the great Spanish conversation!",
-      time: "2 minutes ago",
-      read: false,
-      icon: MessageSquare
-    },
-    {
-      id: 2,
-      type: "friend",
-      title: "Friend request",
-      description: "John wants to connect with you",
-      time: "1 hour ago",
-      read: false,
-      icon: UserPlus
-    },
-    {
-      id: 3,
-      type: "session",
-      title: "Session reminder",
-      description: "Your French conversation starts in 15 minutes",
-      time: "3 hours ago",
-      read: true,
-      icon: Calendar
-    },
-    {
-      id: 4,
-      type: "message",
-      title: "Room invitation",
-      description: "You've been invited to 'Advanced English Discussion'",
-      time: "1 day ago",
-      read: true,
-      icon: MessageSquare
-    },
-    {
-      id: 5,
-      type: "system",
-      title: "New feature available",
-      description: "Try our new AI-powered pronunciation checker",
-      time: "2 days ago",
-      read: true,
-      icon: Bell
+  
+  const { 
+    notifications, 
+    unreadCount, 
+    loading,
+    markAsRead, 
+    markAllAsRead,
+    deleteNotification 
+  } = useNotifications();
+
+  // Convert backend notifications to frontend format
+  const formattedNotifications = notifications.map(notif => ({
+    id: parseInt(notif._id.slice(-8), 16), // Convert ObjectId to number for compatibility
+    type: notif.type,
+    title: notif.title,
+    description: notif.description,
+    time: new Date(notif.createdAt).toLocaleString(),
+    read: notif.read,
+    icon: getIconForType(notif.type),
+    _id: notif._id // Keep original ID for API calls
+  }));
+
+  function getIconForType(type: string) {
+    switch (type) {
+      case 'message': return MessageSquare;
+      case 'friend': return UserPlus;
+      case 'session': return Calendar;
+      default: return Bell;
     }
-  ]);
-
-  const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-  };
+  }
 
   const handleNotificationClick = (notification: any) => {
     setSelectedNotification(notification);
     setIsModalOpen(true);
     if (!notification.read) {
-      markAsRead(notification.id);
+      const backendNotif = notifications.find(n => n._id === notification._id);
+      if (backendNotif) {
+        markAsRead(backendNotif._id);
+      }
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const handleMarkAsRead = (id: number) => {
+    const notification = formattedNotifications.find(n => n.id === id);
+    if (notification) {
+      markAsRead(notification._id);
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -94,6 +73,21 @@ const Notifications = () => {
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
+
+  if (loading) {
+    return (
+      <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
+          <div className="container mx-auto p-2">
+            <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+            <div className="flex mt-4 justify-center items-center min-h-[400px]">
+              <p>Loading notifications...</p>
+            </div>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
@@ -149,7 +143,7 @@ const Notifications = () => {
 
                 {/* Notifications List */}
                 <div className="space-y-3">
-                  {notifications.length === 0 ? (
+                  {formattedNotifications.length === 0 ? (
                     <Card>
                       <CardContent className="text-center py-12">
                         <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -158,7 +152,7 @@ const Notifications = () => {
                       </CardContent>
                     </Card>
                   ) : (
-                    notifications.map((notification) => {
+                    formattedNotifications.map((notification) => {
                       const Icon = notification.icon;
                       return (
                         <Card 
@@ -212,7 +206,7 @@ const Notifications = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           notification={selectedNotification}
-          onMarkAsRead={markAsRead}
+          onMarkAsRead={handleMarkAsRead}
         />
         
         <Footer />

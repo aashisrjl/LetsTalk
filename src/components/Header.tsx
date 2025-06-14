@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Bell,
   Menu,
@@ -20,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { CoffeeModal } from "@/components/CoffeeModal";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { MessageSquare, UserPlus, Calendar } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 import axios from "axios";
 
 interface HeaderProps {
@@ -30,58 +32,38 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [user, setUser] = useState(null); // State to store user data
   const [showCoffeeModal, setShowCoffeeModal] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "message",
-      title: "New message from John",
-      description: "Hey there! I wanted to discuss the upcoming project with you. Do you have time for a quick call today?",
-      time: "2 minutes ago",
-      read: false,
-      icon: MessageSquare
-    },
-    {
-      id: 2,
-      type: "friend",
-      title: "Friend request from Sarah",
-      description: "Sarah Johnson wants to connect with you on FreeTalk. You have 5 mutual connections.",
-      time: "1 hour ago",
-      read: false,
-      icon: UserPlus
-    },
-    {
-      id: 3,
-      type: "session",
-      title: "Session reminder",
-      description: "Your scheduled language practice session with Maria is starting in 30 minutes. Don't forget to join!",
-      time: "3 hours ago",
-      read: true,
-      icon: Calendar
-    },
-    {
-      id: 4,
-      type: "message",
-      title: "Room invitation",
-      description: "You've been invited to 'Advanced English Discussion' room. Join now to start practicing!",
-      time: "1 day ago",
-      read: true,
-      icon: MessageSquare
-    },
-    {
-      id: 5,
-      type: "system",
-      title: "New feature available",
-      description: "Try our new AI-powered pronunciation checker to improve your speaking skills.",
-      time: "2 days ago",
-      read: true,
-      icon: Bell
-    }
-  ]);
+  
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead,
+    deleteNotification 
+  } = useNotifications();
 
   const notificationRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const notificationCount = notifications.filter(n => !n.read).length;
+  // Convert backend notifications to frontend format
+  const formattedNotifications = notifications.map(notif => ({
+    id: parseInt(notif._id.slice(-8), 16), // Convert ObjectId to number for compatibility
+    type: notif.type,
+    title: notif.title,
+    description: notif.description,
+    time: new Date(notif.createdAt).toLocaleString(),
+    read: notif.read,
+    icon: getIconForType(notif.type),
+    _id: notif._id // Keep original ID for API calls
+  }));
+
+  function getIconForType(type: string) {
+    switch (type) {
+      case 'message': return MessageSquare;
+      case 'friend': return UserPlus;
+      case 'session': return Calendar;
+      default: return Bell;
+    }
+  }
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -141,17 +123,14 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   const handleMarkAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+    const notification = formattedNotifications.find(n => n.id === id);
+    if (notification) {
+      markAsRead(notification._id);
+    }
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+    markAllAsRead();
   };
 
   return (
@@ -197,19 +176,19 @@ export function Header({ onMenuClick }: HeaderProps) {
                 onClick={handleNotificationClick}
               >
                 <Bell className="h-5 w-5" />
-                {notificationCount > 0 && (
+                {unreadCount > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
                   >
-                    {notificationCount}
+                    {unreadCount}
                   </Badge>
                 )}
               </Button>
 
               {showNotificationDropdown && (
                 <NotificationDropdown
-                  notifications={notifications}
+                  notifications={formattedNotifications}
                   onMarkAsRead={handleMarkAsRead}
                   onMarkAllAsRead={handleMarkAllAsRead}
                 />
@@ -256,7 +235,6 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
       </header>
-
     </>
   );
 }

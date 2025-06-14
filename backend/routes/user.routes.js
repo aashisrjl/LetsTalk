@@ -1,9 +1,13 @@
+
 const express = require('express');
 const passport = require('../services/passport');
 const generateToken = require('../utils/jwt');
 const { getUserProfile, getUserById, updateUserProfile, getUserProfileData, countAllUsers, likeUser, followUser, unfollowUser, addFriend, removeFriend } = require('../controller/user.controller');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
+
+// Include notification routes
+router.use('/', require('./notification.routes'));
 
 router.post("/users/:userId/likes",isAuthenticated,likeUser)
 router.post("/users/:userId/follow",isAuthenticated,followUser)
@@ -38,7 +42,6 @@ router.get('/auth/google/callback',
   }
 );
 
-
 router.get('/auth/facebook',
   passport.authenticate('facebook', { scope: ['email'],session: false })
 );
@@ -56,7 +59,6 @@ router.get('/auth/facebook/callback',
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
   }
 );
-
 
 // logout route
 router.post("/logout", (req, res) => {

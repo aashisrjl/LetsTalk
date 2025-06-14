@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MessageSquare, UserPlus, Calendar, Bell, Reply, Forward, Trash2 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface NotificationModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface NotificationModalProps {
     time: string;
     read: boolean;
     icon: any;
+    _id?: string;
   } | null;
   onMarkAsRead: (id: number) => void;
 }
@@ -33,6 +35,8 @@ export function NotificationModal({
   notification, 
   onMarkAsRead 
 }: NotificationModalProps) {
+  const { deleteNotification } = useNotifications();
+
   if (!notification) return null;
 
   const Icon = notification.icon;
@@ -50,6 +54,13 @@ export function NotificationModal({
   const handleMarkAsRead = () => {
     if (!notification.read) {
       onMarkAsRead(notification.id);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (notification._id) {
+      await deleteNotification(notification._id);
+      onClose();
     }
   };
 
@@ -142,6 +153,7 @@ export function NotificationModal({
             <Button 
               size="sm" 
               variant="outline" 
+              onClick={handleDelete}
               className="flex items-center gap-2 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
