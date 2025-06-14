@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '@/hooks/useRoom';
@@ -8,8 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff, UserPlus, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -38,6 +41,17 @@ const Room = () => {
     isOwner,
   } = useRoom(roomId || '', currentUser.id, currentUser.name, roomTitle);
 
+  // Fetch current user's social connections
+  const { data: currentUserData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      const response = await axios.get('http://localhost:3000/auth/user-data', {
+        withCredentials: true,
+      });
+      return response.data.user;
+    },
+  });
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim()) {
@@ -54,6 +68,68 @@ const Room = () => {
         description: "User has been removed from the room",
       });
     }
+  };
+
+  const handleFollowUser = async (userId: string) => {
+    try {
+      await axios.post(`http://localhost:3000/users/${userId}/follow`, {}, {
+        withCredentials: true,
+      });
+      toast({
+        title: "User Followed",
+        description: "You are now following this user",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to follow user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddFriend = async (userId: string) => {
+    try {
+      await axios.post(`http://localhost:3000/users/${userId}/friend`, {}, {
+        withCredentials: true,
+      });
+      toast({
+        title: "Friend Request Sent",
+        description: "Friend request has been sent",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send friend request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLikeUser = async (userId: string) => {
+    try {
+      await axios.post(`http://localhost:3000/users/${userId}/likes`, {}, {
+        withCredentials: true,
+      });
+      toast({
+        title: "User Liked",
+        description: "You liked this user",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to like user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isUserFollowed = (userId: string) => {
+    return currentUserData?.following?.includes(userId) || false;
+  };
+
+  const isUserFriend = (userId: string) => {
+    return currentUserData?.friends?.includes(userId) || false;
   };
 
   const handleLeaveRoom = () => {
@@ -151,8 +227,8 @@ const Room = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-48">
-                <div className="space-y-2">
+              <ScrollArea className="h-64">
+                <div className="space-y-3">
                   {users.map((user) => (
                     <div key={user.userId} className="flex items-center justify-between p-2 rounded-lg border">
                       <div className="flex items-center gap-2">
@@ -162,22 +238,59 @@ const Room = () => {
                             {user.userName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm font-medium">{user.userName}</p>
                           {user.userId === ownerId && (
                             <Crown className="w-3 h-3 text-yellow-500" />
                           )}
                         </div>
                       </div>
-                      {isOwner && user.userId !== currentUser.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleKickUser(user.userId)}
-                          className="h-6 w-6"
-                        >
-                          <UserMinus className="w-3 h-3" />
-                        </Button>
+                      
+                      {user.userId !== currentUser.id && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleLikeUser(user.userId)}
+                            className="h-6 w-6"
+                          >
+                            <Heart className="w-3 h-3" />
+                          </Button>
+                          
+                          {!isUserFollowed(user.userId) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleFollowUser(user.userId)}
+                              className="h-6 w-6"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                            </Button>
+                          )}
+                          
+                          {!isUserFriend(user.userId) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleAddFriend(user.userId)}
+                              className="h-6 w-6"
+                              title="Add Friend"
+                            >
+                              <Users className="w-3 h-3" />
+                            </Button>
+                          )}
+                          
+                          {isOwner && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleKickUser(user.userId)}
+                              className="h-6 w-6"
+                            >
+                              <UserMinus className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
