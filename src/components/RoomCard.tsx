@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,8 @@ export function RoomCard({
   const navigate = useNavigate();
 
   const getLanguageColor = (language: string) => {
+    if (!language) return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    
     switch (language.toLowerCase()) {
       case "english": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "spanish": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
@@ -42,7 +43,9 @@ export function RoomCard({
   };
 
   const getDifficultyVariant = (difficulty: string) => {
-    switch (difficulty?.toLowerCase()) {
+    if (!difficulty) return "default";
+    
+    switch (difficulty.toLowerCase()) {
       case "beginner": return "secondary";
       case "intermediate": return "outline";
       case "advanced": return "destructive";
@@ -84,7 +87,7 @@ export function RoomCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
-            {title}
+            {title || "Untitled Room"}
           </CardTitle>
           {isLive && (
             <Badge variant="destructive" className="animate-pulse">
@@ -100,7 +103,9 @@ export function RoomCard({
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-muted-foreground" />
-          <Badge className={`text-xs ${getLanguageColor(language)}`}>{language}</Badge>
+          <Badge className={`text-xs ${getLanguageColor(language)}`}>
+            {language || "Unknown"}
+          </Badge>
         </div>
         
         <div className="flex items-center gap-2">
@@ -130,7 +135,7 @@ export function RoomCard({
         
         <div>
           <p className="text-sm font-medium mb-1">Topic:</p>
-          <Badge variant={getDifficultyVariant(topic)}>{topic}</Badge>
+          <Badge variant={getDifficultyVariant(topic)}>{topic || "General"}</Badge>
         </div>
         
         {level && (
