@@ -7,6 +7,9 @@ import Auth from './pages/Auth';
 import { Dashboard } from './components/Dashboard';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
+import Rooms from './pages/Rooms';
+import Coffee from './pages/Coffee';
 import { Toaster } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient();
@@ -21,6 +24,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/rooms" element={<Rooms />} />
+          <Route path="/buy-me-coffee" element={<Coffee />} />
         </Routes>
         <Toaster />
       </BrowserRouter>
