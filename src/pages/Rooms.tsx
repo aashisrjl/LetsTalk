@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
@@ -174,14 +175,10 @@ const Rooms = () => {
                           description={room.description || ""}
                           level={room.level || "beginner"}
                           language={room.language || ""} // Added language prop
-                          participants={room.participants.map((p) => ({
-                            id: p._id,
-                            photo: p.photo, // Assuming populated
-                            rating: p.rating, // Assuming populated
-                            name: p.name, // Added name
-                          }))} // Updated to include name
+                          participants={room.participants?.length || 0}
                           maxParticipants={room.maxParticipants || 10}
                           isLive={room.isLive || false}
+                          topic={room.topic || "General"} // Added missing topic prop
                           roomId={room.roomId}
                         />
                       ))
