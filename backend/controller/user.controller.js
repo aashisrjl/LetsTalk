@@ -1,6 +1,6 @@
-
 const { User2 } = require("lucide-react");
 const User = require("../database/models/user.model"); // Adjust the path as necessary
+
 exports.getUserProfile = async (req, res) => {
   const userId = req.user.id;
   const user = await User.findOne({ _id: userId });
@@ -165,5 +165,131 @@ exports.likeUser = async (req, res) => {
   } catch (err) {
     console.error('Rate user error:', err);
     res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// Follow user
+exports.followUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const currentUserId = req.userId;
+
+    if (userId === currentUserId) {
+      return res.status(400).json({ success: false, message: 'Cannot follow yourself' });
+    }
+
+    const userToFollow = await User.findById(userId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!userToFollow || !currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already following
+    if (currentUser.following.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'Already following this user' });
+    }
+
+    // Add to following/followers
+    currentUser.following.push(userId);
+    userToFollow.followers.push(currentUserId);
+
+    await currentUser.save();
+    await userToFollow.save();
+
+    res.json({ success: true, message: 'User followed successfully' });
+  } catch (error) {
+    console.error('Follow user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Unfollow user
+exports.unfollowUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const currentUserId = req.userId;
+
+    const userToUnfollow = await User.findById(userId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!userToUnfollow || !currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Remove from following/followers
+    currentUser.following = currentUser.following.filter(id => id.toString() !== userId);
+    userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
+
+    await currentUser.save();
+    await userToUnfollow.save();
+
+    res.json({ success: true, message: 'User unfollowed successfully' });
+  } catch (error) {
+    console.error('Unfollow user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Add friend
+exports.addFriend = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const currentUserId = req.userId;
+
+    if (userId === currentUserId) {
+      return res.status(400).json({ success: false, message: 'Cannot add yourself as friend' });
+    }
+
+    const userToAdd = await User.findById(userId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!userToAdd || !currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already friends
+    if (currentUser.friends.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'Already friends with this user' });
+    }
+
+    // Add to friends (mutual)
+    currentUser.friends.push(userId);
+    userToAdd.friends.push(currentUserId);
+
+    await currentUser.save();
+    await userToAdd.save();
+
+    res.json({ success: true, message: 'Friend added successfully' });
+  } catch (error) {
+    console.error('Add friend error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Remove friend
+exports.removeFriend = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const currentUserId = req.userId;
+
+    const userToRemove = await User.findById(userId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!userToRemove || !currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Remove from friends (mutual)
+    currentUser.friends = currentUser.friends.filter(id => id.toString() !== userId);
+    userToRemove.friends = userToRemove.friends.filter(id => id.toString() !== currentUserId);
+
+    await currentUser.save();
+    await userToRemove.save();
+
+    res.json({ success: true, message: 'Friend removed successfully' });
+  } catch (error) {
+    console.error('Remove friend error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

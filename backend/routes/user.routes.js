@@ -1,18 +1,22 @@
-
 const express = require('express');
 const passport = require('../services/passport');
 const generateToken = require('../utils/jwt');
-const { getUserProfile, getUserById, updateUserProfile, getUserProfileData, countAllUsers, likeUser } = require('../controller/user.controller');
+const { getUserProfile, getUserById, updateUserProfile, getUserProfileData, countAllUsers, likeUser, followUser, unfollowUser, addFriend, removeFriend } = require('../controller/user.controller');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.post("/users/:userId/likes",isAuthenticated,likeUser)
+router.post("/users/:userId/follow",isAuthenticated,followUser)
+router.post("/users/:userId/unfollow",isAuthenticated,unfollowUser)
+router.post("/users/:userId/friend",isAuthenticated,addFriend)
+router.post("/users/:userId/unfriend",isAuthenticated,removeFriend)
 router.get("/users/count", countAllUsers);
 router.patch('/users/:id',isAuthenticated,updateUserProfile);
 router.get('/users/:id', isAuthenticated, getUserById);
 
 router.get('/auth/user',isAuthenticated,getUserProfile );
 router.get('/auth/user-data',isAuthenticated,getUserProfileData );
+
 // Google callback
 router.get('/auth/google',
   passport.authenticate('google', {
@@ -64,6 +68,5 @@ router.post("/logout", (req, res) => {
 
   return res.status(200).json({ message: "Logout successful" });
 });
-
 
 module.exports = router;

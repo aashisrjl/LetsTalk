@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const languageSchema = new mongoose.Schema({
@@ -37,6 +38,11 @@ const userSchema = new mongoose.Schema({
     totalHours: { type: Number, default: 0 },
     languagesPracticed: { type: Number, default: 0 },
   },
+
+  // Social connections
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
   // Notifications, Privacy, Audio/Video, Appearance
   notificationPrefs: {

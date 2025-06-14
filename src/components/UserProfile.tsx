@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Star } from "lucide-react";
+import { MapPin, Calendar, Star, Users, UserPlus, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,18 +25,21 @@ export function UserProfile() {
       weeklySessions: 0,
       totalHours: 0,
       languagesPracticed: 0,
-      sessions: 0, // Added
+      sessions: 0,
     },
     recentActivity: [],
     likes: 0,
-    sessions: 0, // Added (will be overridden by stats.sessions)
+    sessions: 0,
+    followers: [],
+    following: [],
+    friends: [],
   });
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await axios.get('http://localhost:3000/auth/user-data', {
-          withCredentials: true, // Ensure cookies are sent with the request
+          withCredentials: true,
         });
 
         if (response.data.success) {
@@ -58,11 +62,14 @@ export function UserProfile() {
               weeklySessions: user.stats?.weeklySessions || 0,
               totalHours: user.stats?.totalHours || 0,
               languagesPracticed: user.stats?.languagesPracticed || 0,
-              sessions: user.stats?.sessions || 0, // Added
+              sessions: user.stats?.sessions || 0,
             },
             recentActivity: user.recentActivity || [],
             likes: user.likes || 0,
-            sessions: user.stats?.sessions || 0, // Added (redundant, but kept for clarity)
+            sessions: user.stats?.sessions || 0,
+            followers: user.followers || [],
+            following: user.following || [],
+            friends: user.friends || [],
           });
         }
       } catch (error) {
@@ -111,6 +118,32 @@ export function UserProfile() {
             <span>Joined {userData.joinDate || "March 2024"}</span>
           </div>
 
+          {/* Social Stats */}
+          <div className="grid grid-cols-3 gap-4 py-4 border-y">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Users className="h-4 w-4 text-blue-500" />
+                <span className="font-semibold">{userData.followers.length}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Followers</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <UserPlus className="h-4 w-4 text-green-500" />
+                <span className="font-semibold">{userData.following.length}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Following</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Heart className="h-4 w-4 text-red-500" />
+                <span className="font-semibold">{userData.friends.length}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Friends</p>
+            </div>
+          </div>
+
+          {/* Languages */}
           <div>
             <h4 className="font-medium mb-2">Speaking Languages</h4>
             <div className="flex flex-wrap gap-1">
