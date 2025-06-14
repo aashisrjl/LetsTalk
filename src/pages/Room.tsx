@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '@/hooks/useRoom';
@@ -14,6 +13,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
+// Helper function to generate a valid MongoDB ObjectId format
+const generateObjectId = () => {
+  const timestamp = Math.floor(new Date().getTime() / 1000).toString(16);
+  const objectId = timestamp + 'xxxxxxxxxxxxxxxx'.replace(/[x]/g, () => {
+    return Math.floor(Math.random() * 16).toString(16);
+  }).toLowerCase();
+  return objectId;
+};
+
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
@@ -21,11 +29,15 @@ const Room = () => {
   
   console.log('Room component loaded with roomId:', roomId);
   
-  // Mock user data - in real app, get from auth context
-  const [currentUser] = useState({
-    id: 'user-' + Math.random().toString(36).substr(2, 9),
-    name: 'User ' + Math.random().toString(36).substr(2, 5),
-    photo: null,
+  // Try to get real user data first, fallback to mock with proper ObjectId
+  const [currentUser] = useState(() => {
+    // In a real app, this would come from auth context
+    // For now, we'll generate a proper ObjectId format
+    return {
+      id: generateObjectId(),
+      name: 'User ' + Math.random().toString(36).substr(2, 5),
+      photo: null,
+    };
   });
 
   console.log('Current user:', currentUser);
