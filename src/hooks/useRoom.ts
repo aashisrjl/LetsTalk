@@ -24,26 +24,42 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
 
+  console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
+
   const connectToRoom = useCallback(() => {
+    console.log('Attempting to connect to room...');
     const socket = socketManager.connect();
     
     socket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
+      console.log('Joining room with data:', { roomId, userId, userName, roomTitle });
       socketManager.joinRoom(roomId, userId, userName, roomTitle);
     });
 
     socket.on('disconnect', () => {
-      console.log('Disconnected from server');
+      console.log('❌ Disconnected from server');
       setIsConnected(false);
     });
 
+    socket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error);
+      setIsConnected(false);
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to the room server",
+        variant: "destructive",
+      });
+    });
+
     socketManager.onRoomUsers((data) => {
+      console.log('📋 Room users updated:', data);
       setUsers(data.users || []);
       setOwnerId(data.ownerId || '');
     });
 
     socketManager.onUserJoined((data) => {
+      console.log('👤 User joined:', data);
       toast({
         title: "User Joined",
         description: `${data.userName} joined the room`,
@@ -51,6 +67,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     });
 
     socketManager.onUserLeft((data) => {
+      console.log('👋 User left:', data);
       toast({
         title: "User Left",
         description: `User left the room`,
@@ -58,10 +75,12 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     });
 
     socketManager.onReceiveMessage((data) => {
+      console.log('💬 Message received:', data);
       setMessages(prev => [...prev, data]);
     });
 
     socketManager.onOwnershipTransferred((data) => {
+      console.log('👑 Ownership transferred:', data);
       setOwnerId(data.newOwnerId);
       toast({
         title: "Ownership Transferred",
@@ -70,15 +89,16 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     });
 
     socketManager.onKicked((data) => {
+      console.log('🚫 Kicked from room:', data);
       toast({
         title: "Kicked from Room",
         description: data.reason || "You have been kicked from the room",
         variant: "destructive",
       });
-      // Handle redirect or cleanup
     });
 
     socketManager.onError((data) => {
+      console.error('❌ Socket error:', data);
       toast({
         title: "Error",
         description: data.message || "An error occurred",
@@ -86,9 +106,26 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       });
     });
 
+    // Add timeout for connection
+    const connectionTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        console.warn('⏰ Connection timeout');
+        toast({
+          title: "Connection Timeout",
+          description: "Taking longer than expected to connect. Please check your internet connection.",
+          variant: "destructive",
+        });
+      }
+    }, 10000);
+
+    socket.on('connect', () => {
+      clearTimeout(connectionTimeout);
+    });
+
   }, [roomId, userId, userName, roomTitle, toast]);
 
   const disconnectFromRoom = useCallback(() => {
+    console.log('Disconnecting from room...');
     if (isConnected) {
       socketManager.leaveRoom(roomId, userId);
       socketManager.removeAllListeners();
@@ -98,22 +135,44 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   }, [roomId, userId, isConnected]);
 
   const sendMessage = useCallback((message: string) => {
+    console.log('Sending message:', message);
+    if (!isConnected) {
+      console.warn('Cannot send message: not connected');
+      toast({
+        title: "Cannot Send Message",
+        description: "Not connected to the room",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     socketManager.sendMessage(message, userName);
     // Add own message to local state
-    setMessages(prev => [...prev, {
+    const newMessage = {
       message,
       userName,
       time: new Date().toISOString(),
-    }]);
-  }, [userName]);
+    };
+    console.log('Adding local message:', newMessage);
+    setMessages(prev => [...prev, newMessage]);
+  }, [userName, isConnected, toast]);
 
   const kickUser = useCallback((targetUserId: string) => {
+    console.log('Kicking user:', targetUserId);
     socketManager.kickUser(roomId, targetUserId);
   }, [roomId]);
 
   useEffect(() => {
+    if (!roomId || !userId || !userName) {
+      console.warn('Missing required parameters for room connection');
+      return;
+    }
+    
+    console.log('Setting up room connection...');
     connectToRoom();
+    
     return () => {
+      console.log('Cleaning up room connection...');
       disconnectFromRoom();
     };
   }, [connectToRoom, disconnectFromRoom]);
