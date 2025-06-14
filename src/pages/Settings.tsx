@@ -64,6 +64,12 @@ const Settings = () => {
     noiseSuppression: true,
   });
 
+  const [userInfo, setUserInfo] = useState({
+    _id: "",
+    name: "",
+    email: "",
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -79,6 +85,12 @@ const Settings = () => {
         const data = response.data;
 
         if (data.success) {
+          setUserInfo({
+            _id: data.user._id,
+            name: data.user.name,
+            email: data.user.email,
+          });
+          
           setProfileSettings({
             displayName: data.user.name || "",
             bio: data.user.bio || "",
@@ -101,10 +113,11 @@ const Settings = () => {
 
     fetchUserData();
   }, [toast]);
+
   const handleSaveProfile = async () => {
     try {
       const response = await axios.patch(
-        `http://localhost:3000/users/${profileSettings._id}`,
+        `http://localhost:3000/users/${userInfo._id}`,
         {
           displayName: profileSettings.displayName,
           bio: profileSettings.bio,
@@ -119,7 +132,7 @@ const Settings = () => {
           })),
         },
         {
-          withCredentials: true, // Include cookies for authentication
+          withCredentials: true,
         }
       );
 

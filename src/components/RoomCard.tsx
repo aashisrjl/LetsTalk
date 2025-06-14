@@ -1,158 +1,71 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Video, Mic, MessageSquare, Clock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Star } from "lucide-react";
-import { useState } from "react";
-import UserProfileModal from "@/components/userProfileModal"; // Adjust the import path
+import { Users, Clock, Globe } from "lucide-react";
 
 interface RoomCardProps {
   title: string;
-  description: string;
-  level: string;
   language: string;
-  participants: { id: string; photo?: string; likes?: number; name?: string }[];
+  participants: number;
   maxParticipants: number;
   isLive: boolean;
-  roomId?: string;
+  topic: string;
 }
 
-export function RoomCard({ 
-  title, 
-  description, 
-  level, 
-  language, 
-  participants = [], 
-  maxParticipants, 
-  isLive, 
-  roomId = "test-room"
+export function RoomCard({
+  title,
+  language,
+  participants,
+  maxParticipants,
+  isLive,
+  topic,
 }: RoomCardProps) {
-  const navigate = useNavigate();
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleJoinRoom = () => {
-    if (roomId) {
-      navigate(`/room/${roomId}`);
-    } else {
-      console.error("No roomId provided for navigation");
+  const getLanguageColor = (language: string) => {
+    switch (language) {
+      case "english": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "spanish": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "french": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
-  // Limit participants to 3 for better layout
-  const displayedParticipants = participants
-
-  const handleParticipantClick = (participantId) => {
-    setSelectedUserId(participantId);
-    setIsModalOpen(true);
+  const getDifficultyVariant = (difficulty: string) => {
+    switch (difficulty) {
+      case "beginner": return "secondary";
+      case "intermediate": return "outline";
+      case "advanced": return "destructive";
+      default: return "default";
+    }
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="text-xs">
-                {language}
-              </Badge>
-              {isLive && (
-                <Badge className="bg-red-500 hover:bg-red-600 text-xs animate-pulse">
-                  LIVE
-                </Badge>
-              )}
-              {!isLive && (
-                <Badge variant="secondary" className="text-xs">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Scheduled
-                </Badge>
-              )}
-            </div>
-            <CardTitle className="text-lg leading-tight">{title}</CardTitle>
-            {description && (
-              <CardDescription className="text-sm mt-1 line-clamp-2">{description}</CardDescription>
-            )}
-            {level && (
-              <CardDescription className="text-sm mt-1">
-                <Badge variant={level === "beginner" ? "green" : level === "intermediate" ? "yellow" : "red"}>
-                  {level.charAt(0).toUpperCase() + level.slice(1)}
-                </Badge>
-              </CardDescription>
-            )}
-          </div>
-          <div className="flex gap-1">
-            <div className="p-1.5 rounded-md bg-green-100 text-green-600">
-              <Video className="h-3 w-3" />
-            </div>
-            <div className="p-1.5 rounded-md bg-blue-100 text-blue-600">
-              <Mic className="h-3 w-3" />
-            </div>
-            <div className="p-1.5 rounded-md bg-purple-100 text-purple-600">
-              <MessageSquare className="h-3 w-3" />
-            </div>
-          </div>
-        </div>
+    <Card className="bg-background shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
-
-      <CardContent className="pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span>{participants.length}/{maxParticipants}</span>
-          </div>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          <Badge className={`text-xs ${getLanguageColor(language)}`}>{language}</Badge>
         </div>
-        {/* Participants Section */}
-        {displayedParticipants.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {displayedParticipants.map((participant) => (
-              <div 
-                key={participant.id} 
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => handleParticipantClick(participant.id)}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage 
-                    src={participant.photo || "/placeholder.svg"} 
-                    alt={`${participant.name || 'Anonymous'}'s profile picture`} 
-                  />
-                  <AvatarFallback>
-                    {participant.name ? participant.name.slice(0, 2).toUpperCase() : "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <span className="text-sm">{participant.name || "Anonymous"}</span>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-yellow-400" />
-                    <span>{participant.likes || 0}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {participants.length > 3 && (
-              <span className="text-sm text-muted-foreground">+{participants.length - 3} more</span>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {participants}/{maxParticipants} Participants
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {isLive ? "Live" : "Scheduled"}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Topic:</p>
+          <Badge variant={getDifficultyVariant(topic)}>{topic}</Badge>
+        </div>
+        <Button variant="secondary" className="w-full">Join Room</Button>
       </CardContent>
-
-      <CardFooter>
-        <Button 
-          className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-          variant={isLive ? "default" : "outline"}
-          onClick={handleJoinRoom}
-          disabled={!roomId}
-        >
-          {isLive ? "Join Now" : "Schedule"}
-        </Button>
-      </CardFooter>
-
-      <UserProfileModal 
-        userId={selectedUserId} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
     </Card>
   );
 }

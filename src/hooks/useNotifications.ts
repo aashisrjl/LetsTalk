@@ -33,7 +33,7 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = async (page = 1, limit = 10) => {
+  const fetchNotifications = async (page = 1, limit = 10, showToast = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,10 +46,18 @@ export const useNotifications = () => {
       if (response.data.success) {
         setNotifications(response.data.notifications);
         setUnreadCount(response.data.unreadCount);
+        
+        if (showToast) {
+          toast({
+            title: "Notifications Updated",
+            description: `${response.data.totalCount} notifications loaded`,
+          });
+        }
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to fetch notifications';
       setError(errorMessage);
+      
       toast({
         title: "Error",
         description: errorMessage,
@@ -75,6 +83,11 @@ export const useNotifications = () => {
           )
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        toast({
+          title: "Notification Read",
+          description: "Notification marked as read",
+        });
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to mark notification as read';
@@ -99,6 +112,7 @@ export const useNotifications = () => {
           prev.map(notif => ({ ...notif, read: true }))
         );
         setUnreadCount(0);
+        
         toast({
           title: "Success",
           description: "All notifications marked as read",
@@ -122,14 +136,16 @@ export const useNotifications = () => {
       );
 
       if (response.data.success) {
+        const deletedNotif = notifications.find(n => n._id === notificationId);
+        
         setNotifications(prev => 
           prev.filter(notif => notif._id !== notificationId)
         );
-        // Update unread count if the deleted notification was unread
-        const deletedNotif = notifications.find(n => n._id === notificationId);
+        
         if (deletedNotif && !deletedNotif.read) {
           setUnreadCount(prev => Math.max(0, prev - 1));
         }
+        
         toast({
           title: "Success",
           description: "Notification deleted successfully",
@@ -137,6 +153,32 @@ export const useNotifications = () => {
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to delete notification';
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      // Delete all notifications one by one
+      const deletePromises = notifications.map(notif => 
+        axios.delete(`http://localhost:3000/notifications/${notif._id}`, { withCredentials: true })
+      );
+      
+      await Promise.all(deletePromises);
+      
+      setNotifications([]);
+      setUnreadCount(0);
+      
+      toast({
+        title: "Success",
+        description: "All notifications cleared",
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to clear all notifications';
       toast({
         title: "Error",
         description: errorMessage,
@@ -158,5 +200,6 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    clearAllNotifications,
   };
 };

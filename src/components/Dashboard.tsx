@@ -1,146 +1,176 @@
-import { useEffect, useState } from "react";
-import { RoomCard } from "@/components/RoomCard";
-import { UserProfile } from "@/components/UserProfile";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter } from "lucide-react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import {
+  BarChart,
+  LineChart,
+  PieChart,
+  Users,
+  MessageSquare,
+  Calendar,
+  FileText,
+} from "lucide-react";
+import { RoomCard } from "@/components/RoomCard";
 
-const trendingTopics = [
-  "Business English",
-  "Travel Phrases",
-  "Cultural Exchange",
-  "Grammar Help",
-  "Pronunciation",
-];
+interface Room {
+  id: number;
+  title: string;
+  language: string;
+  participants: number;
+  maxParticipants: number;
+  isLive: boolean;
+  topic: string;
+}
 
 export function Dashboard() {
-  const [featuredRooms, setFeaturedRooms] = useState([]);
-  const [activeUsers, setActiveUsers] = useState(0); // State for active users
-  const [liveRooms, setLiveRooms] = useState(0); // State for live rooms
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch featured rooms
-        const roomsResponse = await axios.get("http://localhost:3000/rooms/featured");
-        if (roomsResponse.data) {
-          setFeaturedRooms(roomsResponse.data.rooms);
-        }
-
-        // Fetch total users
-        const usersResponse = await axios.get("http://localhost:3000/users/count");
-        if (usersResponse.data.success) {
-          setActiveUsers(usersResponse.data.count);
-        }
-
-        // Fetch total rooms
-        const roomsCountResponse = await axios.get("http://localhost:3000/rooms/count");
-        if (roomsCountResponse.data.success) {
-          setLiveRooms(roomsCountResponse.data.count);
-        }
-      } catch (error) {
-        console.error("Failed to load data", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const [rooms, setRooms] = useState<Room[]>([
+    {
+      id: 1,
+      title: "English Conversation",
+      language: "English",
+      participants: 5,
+      maxParticipants: 10,
+      isLive: true,
+      topic: "Travel",
+    },
+    {
+      id: 2,
+      title: "Español para principiantes",
+      language: "Spanish",
+      participants: 3,
+      maxParticipants: 8,
+      isLive: false,
+      topic: "Food",
+    },
+    {
+      id: 3,
+      title: "Learn French",
+      language: "French",
+      participants: 7,
+      maxParticipants: 12,
+      isLive: true,
+      topic: "Culture",
+    },
+  ]);
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="relative rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-8 text-white">
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold mb-4">Welcome to LetsTalk</h1>
-          <p className="text-xl opacity-90 mb-6">
-            Connect with language learners worldwide and practice in real-time
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <span className="text-2xl font-bold">{activeUsers}+</span>
-              <span className="text-sm">Active Users</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <span className="text-2xl font-bold">{liveRooms}+</span>
-              <span className="text-sm">Live Rooms</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-              <span className="text-2xl font-bold">50+</span>
-              <span className="text-sm">Languages</span>
-            </div>
-          </div>
-        </div>
+    <div className="p-6 space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Dashboard</h2>
+        <p className="text-muted-foreground">
+          Overview of your language learning progress and community activity
+        </p>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search rooms by language or topic..."
-            className="pl-10"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">1,250</div>
+            <p className="text-muted-foreground">
+              <span className="text-green-500">+12%</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Total Messages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">5,689</div>
+            <p className="text-muted-foreground">
+              <span className="text-red-500">-5%</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Total Sessions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">342</div>
+            <p className="text-muted-foreground">
+              <span className="text-green-500">+8%</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Total Lessons
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">89</div>
+            <p className="text-muted-foreground">
+              <span className="text-green-500">+3%</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <h3 className="text-xl font-semibold">Live Rooms</h3>
+        <p className="text-muted-foreground">
+          Join a live session and start practicing!
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {rooms.map((room) => (
+          <RoomCard
+            key={room.id}
+            title={room.title}
+            language={room.language}
+            participants={room.participants}
+            maxParticipants={room.maxParticipants}
+            isLive={room.isLive}
+            topic={room.topic}
           />
-        </div>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
+        ))}
       </div>
 
-      <div className="grid lg:grid-cols-4 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-8">
-          {/* Featured Rooms */}
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Featured Rooms</h2>
-              <Button onClick={() => navigate('/rooms')} variant="outline">View All</Button>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-6">
-              {Array.isArray(featuredRooms) && featuredRooms.length > 0 ? (
-                featuredRooms.map((room) => (
-                  <RoomCard
-                    key={room._id}
-                    title={room.title}
-                    language={room.language}
-                    participants={room.participants.length}
-                    maxParticipants={room.maxParticipants}
-                    isLive={room.isLive}
-                    difficulty={room.difficulty || "Beginner"}
-                    topic={room.topic}
-                  />
-                ))
-              ) : (
-                <p>No featured rooms available.</p>
-              )}
-            </div>
-          </section>
+      <div>
+        <h3 className="text-xl font-semibold">Analytics</h3>
+        <p className="text-muted-foreground">
+          Track your progress and see how you're doing
+        </p>
+      </div>
 
-          {/* Trending Topics */}
-          <section>
-            <h2 className="text-2xl font-bold mb-6">Trending Topics</h2>
-            <div className="flex flex-wrap gap-3">
-              {trendingTopics.map((topic) => (
-                <Badge
-                  key={topic}
-                  variant="secondary"
-                  className="px-4 py-2 text-sm hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
-                >
-                  #{topic.replace(" ", "")}
-                </Badge>
-              ))}
-            </div>
-          </section>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Language Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PieChart className="h-48 w-full" />
+          </CardContent>
+        </Card>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <UserProfile />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LineChart className="h-48 w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
