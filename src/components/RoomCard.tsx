@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,9 @@ interface RoomCardProps {
   maxParticipants: number;
   isLive: boolean;
   topic: string;
+  description?: string; // Made optional
+  level?: string; // Added level prop
+  roomId?: string; // Added roomId prop
 }
 
 export function RoomCard({
@@ -19,9 +23,12 @@ export function RoomCard({
   maxParticipants,
   isLive,
   topic,
+  description,
+  level,
+  roomId,
 }: RoomCardProps) {
   const getLanguageColor = (language: string) => {
-    switch (language) {
+    switch (language.toLowerCase()) {
       case "english": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "spanish": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       case "french": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
@@ -42,6 +49,9 @@ export function RoomCard({
     <Card className="bg-background shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
@@ -64,6 +74,12 @@ export function RoomCard({
           <p className="text-sm font-medium">Topic:</p>
           <Badge variant={getDifficultyVariant(topic)}>{topic}</Badge>
         </div>
+        {level && (
+          <div>
+            <p className="text-sm font-medium">Level:</p>
+            <Badge variant={getDifficultyVariant(level)}>{level}</Badge>
+          </div>
+        )}
         <Button variant="secondary" className="w-full">Join Room</Button>
       </CardContent>
     </Card>
