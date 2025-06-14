@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Clock, Globe } from "lucide-react";
+import { Users, Clock, Globe, Play, UserCheck } from "lucide-react";
 
 interface RoomCardProps {
   title: string;
@@ -11,9 +11,10 @@ interface RoomCardProps {
   maxParticipants: number;
   isLive: boolean;
   topic: string;
-  description?: string; // Made optional
-  level?: string; // Added level prop
-  roomId?: string; // Added roomId prop
+  description?: string;
+  level?: string;
+  roomId?: string;
+  onClick?: () => void;
 }
 
 export function RoomCard({
@@ -26,6 +27,7 @@ export function RoomCard({
   description,
   level,
   roomId,
+  onClick,
 }: RoomCardProps) {
   const getLanguageColor = (language: string) => {
     switch (language.toLowerCase()) {
@@ -37,7 +39,7 @@ export function RoomCard({
   };
 
   const getDifficultyVariant = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty?.toLowerCase()) {
       case "beginner": return "secondary";
       case "intermediate": return "outline";
       case "advanced": return "destructive";
@@ -45,42 +47,96 @@ export function RoomCard({
     }
   };
 
+  const isRoomFull = participants >= maxParticipants;
+  const participationPercentage = (participants / maxParticipants) * 100;
+
   return (
-    <Card className="bg-background shadow-md hover:shadow-lg transition-shadow duration-300">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+    <Card className="bg-background shadow-md hover:shadow-lg transition-all duration-300 hover-scale cursor-pointer group">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+            {title}
+          </CardTitle>
+          {isLive && (
+            <Badge variant="destructive" className="animate-pulse">
+              <div className="w-2 h-2 bg-white rounded-full mr-1"></div>
+              LIVE
+            </Badge>
+          )}
+        </div>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-muted-foreground" />
           <Badge className={`text-xs ${getLanguageColor(language)}`}>{language}</Badge>
         </div>
+        
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {participants}/{maxParticipants} Participants
-          </p>
+          <div className="flex-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {participants}/{maxParticipants} Participants
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+              <div 
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  participationPercentage > 80 ? 'bg-red-500' : 
+                  participationPercentage > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(participationPercentage, 100)}%` }}
+              />
+            </div>
+          </div>
         </div>
+        
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {isLive ? "Live" : "Scheduled"}
+            {isLive ? "Live Now" : "Scheduled"}
           </p>
         </div>
+        
         <div>
-          <p className="text-sm font-medium">Topic:</p>
+          <p className="text-sm font-medium mb-1">Topic:</p>
           <Badge variant={getDifficultyVariant(topic)}>{topic}</Badge>
         </div>
+        
         {level && (
           <div>
-            <p className="text-sm font-medium">Level:</p>
+            <p className="text-sm font-medium mb-1">Level:</p>
             <Badge variant={getDifficultyVariant(level)}>{level}</Badge>
           </div>
         )}
-        <Button variant="secondary" className="w-full">Join Room</Button>
+        
+        <Button 
+          variant={isLive ? "default" : "secondary"} 
+          className="w-full group-hover:scale-105 transition-transform"
+          disabled={isRoomFull}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
+          {isRoomFull ? (
+            <>
+              <UserCheck className="w-4 h-4 mr-2" />
+              Room Full
+            </>
+          ) : isLive ? (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              Join Live
+            </>
+          ) : (
+            <>
+              <Users className="w-4 h-4 mr-2" />
+              Join Room
+            </>
+          )}
+        </Button>
       </CardContent>
     </Card>
   );
