@@ -9,6 +9,7 @@ import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Rooms from './pages/Rooms';
+import Room from './pages/Room';
 import Coffee from './pages/Coffee';
 import { Toaster } from "@/components/ui/toaster";
 
@@ -26,6 +27,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/rooms" element={<Rooms />} />
+          <Route path="/room/:roomId" element={<Room />} />
           <Route path="/buy-me-coffee" element={<Coffee />} />
         </Routes>
         <Toaster />
