@@ -1,13 +1,33 @@
-
 const express = require('express');
 const passport = require('../services/passport');
 const generateToken = require('../utils/jwt');
-const { getUserProfile, getUserById, updateUserProfile, getUserProfileData, countAllUsers, likeUser, followUser, unfollowUser, addFriend, removeFriend } = require('../controller/user.controller');
+const { 
+  getUserProfile, 
+  getUserById, 
+  updateUserProfile, 
+  getUserProfileData, 
+  countAllUsers, 
+  likeUser, 
+  followUser, 
+  unfollowUser, 
+  addFriend, 
+  removeFriend,
+  updateNotificationPrefs,
+  updatePrivacyPrefs,
+  updateAudioVideoPrefs,
+  updateAppearancePrefs
+} = require('../controller/user.controller');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 // Include notification routes
 router.use('/', require('./notification.routes'));
+
+// Settings routes
+router.patch('/settings/notifications', isAuthenticated, updateNotificationPrefs);
+router.patch('/settings/privacy', isAuthenticated, updatePrivacyPrefs);
+router.patch('/settings/audio-video', isAuthenticated, updateAudioVideoPrefs);
+router.patch('/settings/appearance', isAuthenticated, updateAppearancePrefs);
 
 router.post("/users/:userId/likes",isAuthenticated,likeUser)
 router.post("/users/:userId/follow",isAuthenticated,followUser)

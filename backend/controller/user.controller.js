@@ -64,20 +64,20 @@ exports.getUserById = async (req, res) => {
 };
 
 // PUT endpoint to edit user profile
-exports.updateUserProfile =  async (req, res) => {
+exports.updateUserProfile = async (req, res) => {
   try {
     const userId = req.userId;
     const { displayName, bio, location, nativeLanguages, learningLanguages } = req.body;
 
     // Validate input (basic validation)
     if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
+      return res.status(400).json({ success: false, message: 'User ID is required' });
     }
 
     // Find the user by ID
     let user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Update fields if provided
@@ -104,16 +104,141 @@ exports.updateUserProfile =  async (req, res) => {
     // Save the updated user
     await user.save();
 
-    res.status(200).json({ message: 'Profile updated successfully', user: {
-      name: user.name,
-      bio: user.bio,
-      location: user.location,
-      nativeLanguages: user.nativeLanguages,
-      learningLanguages: user.learningLanguages
-    }});
+    res.status(200).json({ 
+      success: true,
+      message: 'Profile updated successfully', 
+      user: {
+        name: user.name,
+        bio: user.bio,
+        location: user.location,
+        nativeLanguages: user.nativeLanguages,
+        learningLanguages: user.learningLanguages
+      }
+    });
   } catch (error) {
     console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Update notification preferences
+exports.updateNotificationPrefs = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const notificationSettings = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update notification preferences
+    user.notificationPrefs = {
+      emailNotifications: notificationSettings.emailNotifications || false,
+      appNotifications: notificationSettings.messages || true,
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification preferences updated successfully',
+      notificationPrefs: user.notificationPrefs
+    });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Update privacy preferences
+exports.updatePrivacyPrefs = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const privacySettings = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update privacy preferences
+    user.privacyPrefs = {
+      showProfilePicture: privacySettings.profileVisibility === 'public',
+      showActivityStatus: privacySettings.showOnlineStatus || true,
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Privacy preferences updated successfully',
+      privacyPrefs: user.privacyPrefs
+    });
+  } catch (error) {
+    console.error('Error updating privacy preferences:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Update audio/video preferences
+exports.updateAudioVideoPrefs = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const audioSettings = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update audio/video preferences
+    user.audioVideoPrefs = {
+      preferredMic: audioSettings.preferredMic || '',
+      preferredSpeaker: audioSettings.preferredSpeaker || '',
+      autoAdjustVolume: audioSettings.echoCancellation || true,
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Audio/Video preferences updated successfully',
+      audioVideoPrefs: user.audioVideoPrefs
+    });
+  } catch (error) {
+    console.error('Error updating audio/video preferences:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Update appearance preferences
+exports.updateAppearancePrefs = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const appearanceSettings = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update appearance preferences
+    user.appearancePrefs = {
+      darkMode: appearanceSettings.darkMode || false,
+      language: appearanceSettings.language || 'en',
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Appearance preferences updated successfully',
+      appearancePrefs: user.appearancePrefs
+    });
+  } catch (error) {
+    console.error('Error updating appearance preferences:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
