@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,10 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Heart, UserMinus, MessageSquare } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
+import { Sidebar } from '@/components/Sidebar';
 import axios from 'axios';
 
 const Friends = () => {
   const { toast } = useToast();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch current user's social data
   const { data: userData, isLoading, refetch } = useQuery({
@@ -119,217 +122,231 @@ const Friends = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="min-h-screen flex flex-col">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex flex-1">
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <main className="flex-1 container mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader>
+                    <div className="h-6 bg-gray-200 rounded"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </main>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Social Connections
-        </h1>
-        <p className="text-muted-foreground">
-          Manage your friends and followers
-        </p>
+    <div className="min-h-screen flex flex-col">
+      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <div className="flex flex-1">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 container mx-auto px-4 py-8 space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Social Connections
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your friends and followers
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  Friends
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userData?.friends?.length || 0}</div>
+                <p className="text-muted-foreground">Total friends</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-red-500" />
+                  Followers
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userData?.followers?.length || 0}</div>
+                <p className="text-muted-foreground">People following you</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-500" />
+                  Following
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{userData?.following?.length || 0}</div>
+                <p className="text-muted-foreground">People you follow</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs defaultValue="friends" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="friends">Friends</TabsTrigger>
+              <TabsTrigger value="followers">Followers</TabsTrigger>
+              <TabsTrigger value="following">Following</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="friends">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Friends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {friendsData?.length > 0 ? (
+                    <ScrollArea className="h-96">
+                      <div className="space-y-4">
+                        {friendsData.map((friend: any) => (
+                          <div key={friend.id} className="flex items-center justify-between p-4 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={friend.photo} />
+                                <AvatarFallback>
+                                  {friend.name?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{friend.name}</p>
+                                <p className="text-sm text-muted-foreground">{friend.location}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm">
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Message
+                              </Button>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => handleUnfriend(friend.id)}
+                              >
+                                <UserMinus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No friends yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="followers">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Followers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {followersData?.length > 0 ? (
+                    <ScrollArea className="h-96">
+                      <div className="space-y-4">
+                        {followersData.map((follower: any) => (
+                          <div key={follower.id} className="flex items-center justify-between p-4 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={follower.photo} />
+                                <AvatarFallback>
+                                  {follower.name?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{follower.name}</p>
+                                <p className="text-sm text-muted-foreground">{follower.location}</p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary">Follower</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No followers yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="following">
+              <Card>
+                <CardHeader>
+                  <CardTitle>People You Follow</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {followingData?.length > 0 ? (
+                    <ScrollArea className="h-96">
+                      <div className="space-y-4">
+                        {followingData.map((following: any) => (
+                          <div key={following.id} className="flex items-center justify-between p-4 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={following.photo} />
+                                <AvatarFallback>
+                                  {following.name?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{following.name}</p>
+                                <p className="text-sm text-muted-foreground">{following.location}</p>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleUnfollow(following.id)}
+                            >
+                              Unfollow
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">Not following anyone yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              Friends
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userData?.friends?.length || 0}</div>
-            <p className="text-muted-foreground">Total friends</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-500" />
-              Followers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userData?.followers?.length || 0}</div>
-            <p className="text-muted-foreground">People following you</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-green-500" />
-              Following
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userData?.following?.length || 0}</div>
-            <p className="text-muted-foreground">People you follow</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="friends" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="friends">Friends</TabsTrigger>
-          <TabsTrigger value="followers">Followers</TabsTrigger>
-          <TabsTrigger value="following">Following</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="friends">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Friends</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {friendsData?.length > 0 ? (
-                <ScrollArea className="h-96">
-                  <div className="space-y-4">
-                    {friendsData.map((friend: any) => (
-                      <div key={friend.id} className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={friend.photo} />
-                            <AvatarFallback>
-                              {friend.name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{friend.name}</p>
-                            <p className="text-sm text-muted-foreground">{friend.location}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Message
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleUnfriend(friend.id)}
-                          >
-                            <UserMinus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No friends yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="followers">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Followers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {followersData?.length > 0 ? (
-                <ScrollArea className="h-96">
-                  <div className="space-y-4">
-                    {followersData.map((follower: any) => (
-                      <div key={follower.id} className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={follower.photo} />
-                            <AvatarFallback>
-                              {follower.name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{follower.name}</p>
-                            <p className="text-sm text-muted-foreground">{follower.location}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary">Follower</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No followers yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="following">
-          <Card>
-            <CardHeader>
-              <CardTitle>People You Follow</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {followingData?.length > 0 ? (
-                <ScrollArea className="h-96">
-                  <div className="space-y-4">
-                    {followingData.map((following: any) => (
-                      <div key={following.id} className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={following.photo} />
-                            <AvatarFallback>
-                              {following.name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{following.name}</p>
-                            <p className="text-sm text-muted-foreground">{following.location}</p>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleUnfollow(following.id)}
-                        >
-                          Unfollow
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Not following anyone yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Footer />
     </div>
   );
 };
