@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Clock, Globe, Play, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface RoomCardProps {
   title: string;
@@ -29,6 +30,8 @@ export function RoomCard({
   roomId,
   onClick,
 }: RoomCardProps) {
+  const navigate = useNavigate();
+
   const getLanguageColor = (language: string) => {
     switch (language.toLowerCase()) {
       case "english": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
@@ -50,8 +53,34 @@ export function RoomCard({
   const isRoomFull = participants >= maxParticipants;
   const participationPercentage = (participants / maxParticipants) * 100;
 
+  const handleJoinRoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (roomId && !isRoomFull) {
+      console.log('Joining room:', roomId);
+      if (onClick) {
+        onClick();
+      } else {
+        navigate(`/room/${roomId}`);
+      }
+    }
+  };
+
+  const handleCardClick = () => {
+    if (roomId && !isRoomFull) {
+      console.log('Card clicked, joining room:', roomId);
+      if (onClick) {
+        onClick();
+      } else {
+        navigate(`/room/${roomId}`);
+      }
+    }
+  };
+
   return (
-    <Card className="bg-background shadow-md hover:shadow-lg transition-all duration-300 hover-scale cursor-pointer group">
+    <Card 
+      className="bg-background shadow-md hover:shadow-lg transition-all duration-300 hover-scale cursor-pointer group"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
@@ -115,10 +144,7 @@ export function RoomCard({
           variant={isLive ? "default" : "secondary"} 
           className="w-full group-hover:scale-105 transition-transform"
           disabled={isRoomFull}
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick?.();
-          }}
+          onClick={handleJoinRoom}
         >
           {isRoomFull ? (
             <>

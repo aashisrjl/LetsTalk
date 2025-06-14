@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Footer } from "@/components/Footer";
-import { RoomCard } from "@/components/RoomCard"; // Ensure RoomCard is updated
+import { RoomCard } from "@/components/RoomCard";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,16 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import axios from "axios"; // Import axios for API calls
+import axios from "axios";
 
 const Rooms = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
-  const [rooms, setRooms] = useState([]); // State for rooms data
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null); // Error state
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const languages = [
     "all",
@@ -43,10 +45,11 @@ const Rooms = () => {
     const fetchPublicRooms = async () => {
       try {
         const response = await axios.get("http://localhost:3000/rooms", {
-          // Updated to use /rooms/public endpoint
+          withCredentials: true,
         });
+        console.log('Fetched rooms:', response.data);
         if (response.data.success) {
-          setRooms(response.data.rooms || []); // Rooms should include populated participants
+          setRooms(response.data.rooms || []);
         } else {
           setError("Failed to fetch rooms: No data returned.");
         }
@@ -59,7 +62,7 @@ const Rooms = () => {
     };
 
     fetchPublicRooms();
-  }, []); // Empty dependency array means it runs once on mount
+  }, []);
 
   const filteredRooms = rooms.filter((room) => {
     if (!room || typeof room !== "object") return false;
@@ -77,6 +80,11 @@ const Rooms = () => {
       selectedLanguage === "all" || language === selectedLanguage;
     return matchesSearch && matchesLanguage;
   });
+
+  const handleJoinRoom = (roomId: string) => {
+    console.log('Navigating to room:', roomId);
+    navigate(`/room/${roomId}`);
+  };
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
@@ -174,12 +182,13 @@ const Rooms = () => {
                           title={room.title}
                           description={room.description || ""}
                           level={room.level || "beginner"}
-                          language={room.language || ""} // Added language prop
+                          language={room.language || ""}
                           participants={room.participants?.length || 0}
                           maxParticipants={room.maxParticipants || 10}
                           isLive={room.isLive || false}
-                          topic={room.topic || "General"} // Added missing topic prop
+                          topic={room.topic || "General"}
                           roomId={room.roomId}
+                          onClick={() => handleJoinRoom(room.roomId)}
                         />
                       ))
                     ) : (

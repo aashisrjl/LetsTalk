@@ -88,6 +88,7 @@ export function Dashboard() {
   };
 
   const handleJoinRoom = (roomId: string) => {
+    console.log('Dashboard: Navigating to room:', roomId);
     navigate(`/room/${roomId}`);
   };
 
@@ -222,18 +223,18 @@ export function Dashboard() {
       ) : rooms.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms.slice(0, 6).map((room: Room) => (
-            <div key={room._id} onClick={() => handleJoinRoom(room.roomId)} className="cursor-pointer">
-              <RoomCard
-                title={room.title}
-                language={room.language}
-                participants={room.participants?.length || 0}
-                maxParticipants={room.maxParticipants}
-                isLive={room.isLive || Math.random() > 0.5} // Mock live status
-                topic={room.topic}
-                description={room.description}
-                roomId={room.roomId}
-              />
-            </div>
+            <RoomCard
+              key={room._id}
+              title={room.title}
+              language={room.language}
+              participants={room.participants?.length || 0}
+              maxParticipants={room.maxParticipants}
+              isLive={room.isLive || Math.random() > 0.5}
+              topic={room.topic}
+              description={room.description}
+              roomId={room.roomId}
+              onClick={() => handleJoinRoom(room.roomId)}
+            />
           ))}
         </div>
       ) : (
