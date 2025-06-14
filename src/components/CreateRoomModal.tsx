@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -24,6 +25,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Users, Globe, Lock, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -53,12 +55,13 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     maxParticipants: "10",
     isPrivate: false,
     tags: [] as string[],
-    level: "beginner", // Added default level
+    level: "beginner",
   });
 
   const [newTag, setNewTag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate(); // Add useNavigate hook
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const addTag = () => {
     if (newTag.trim() && !roomData.tags.includes(newTag.trim())) {
@@ -80,6 +83,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const handleSubmit = async () => {
     try {
       setIsLoading(true);
+      console.log('Creating room with data:', roomData);
 
       const payload = {
         title: roomData.title,
@@ -88,10 +92,12 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         maxParticipants: parseInt(roomData.maxParticipants),
         private: roomData.isPrivate,
         tags: roomData.tags,
-        level: roomData.level, // Added level to payload
+        level: roomData.level,
         supports: ["video", "audio", "text"],
         topic: "General",
       };
+
+      console.log('Sending payload:', payload);
 
       const response = await axios.post(
         "http://localhost:3000/rooms",
@@ -101,13 +107,32 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         }
       );
 
-      console.log("Room created:", response.data);
-      // Redirect to the room page with the roomId from the response
-      const roomId = response.data.room.roomId; // Adjust based on your API response structure
-      navigate(`/room/${roomId}`); // Redirect to /room/:roomId
+      console.log("Room created successfully:", response.data);
+      
+      if (response.data.success && response.data.room) {
+        const roomId = response.data.room.roomId;
+        console.log('Navigating to room:', roomId);
+        
+        toast({
+          title: "Room Created",
+          description: "Your room has been created successfully!",
+        });
+        
+        onClose(); // Close the modal first
+        navigate(`/room/${roomId}`); // Then navigate
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error: any) {
-      console.error("Error creating room:", error.response?.data || error.message);
-      alert("Failed to create room. Please try again.");
+      console.error("Error creating room:", error);
+      
+      const errorMessage = error.response?.data?.message || error.message || "Failed to create room";
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
