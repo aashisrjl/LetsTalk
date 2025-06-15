@@ -14,6 +14,8 @@ interface RoomCardProps {
   onClick?: () => void;
   thumbnailUrl?: string;
   likes?: number;
+  topic?: string;
+  description?: string;
 }
 
 export function RoomCard({
@@ -26,6 +28,8 @@ export function RoomCard({
   onClick,
   thumbnailUrl,
   likes,
+  topic,
+  description,
 }: RoomCardProps) {
   const navigate = useNavigate();
 
@@ -74,6 +78,15 @@ export function RoomCard({
       <CardContent className="p-4 flex flex-col items-center justify-center space-y-4">
         <img src={thumbnailUrl || `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`} alt={title} className="w-40 h-40 rounded-full object-cover border-4 border-gray-800" />
         
+        <div className="text-center min-h-[4rem]">
+          <h3 className="font-bold text-lg text-white truncate" title={topic || title}>{topic || title}</h3>
+          {description && (
+            <p className="text-sm text-gray-400 mt-1 max-w-[250px] truncate" title={description}>
+              {description}
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center gap-1 text-white text-sm">
             <Heart className="w-5 h-5 text-red-500" fill="currentColor" />
             <span>{likes || 0}</span>

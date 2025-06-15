@@ -70,11 +70,13 @@ const Rooms = () => {
     const language = room.language || "";
     const description = room.description || "";
     const level = room.level || "";
+    const topic = room.topic || "";
 
     const matchesSearch =
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      level.toLowerCase().includes(searchQuery.toLowerCase());
+      level.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      topic.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLanguage =
       selectedLanguage === "all" || language === selectedLanguage;
     return matchesSearch && matchesLanguage;
@@ -179,6 +181,8 @@ const Rooms = () => {
                         <RoomCard
                           key={room._id}
                           title={room.title}
+                          topic={room.topic}
+                          description={room.description}
                           level={room.level || "Any Level"}
                           language={room.language || "English"}
                           participants={room.participants?.length || 0}
