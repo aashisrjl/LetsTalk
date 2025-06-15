@@ -65,25 +65,6 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }
 
-  // Fetch user profile on mount
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await axios.get('http://localhost:3000/auth/user', {
-          withCredentials: true, // Include cookies for authentication
-        });
-        if (res.status === 200 && res.data.success) {
-          setUser(res.data.user); // Set user data
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
-        setUser(null); // Clear user if fetch fails (e.g., not logged in)
-      }
-    };
-
-    fetchUser();
-  }, []);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
