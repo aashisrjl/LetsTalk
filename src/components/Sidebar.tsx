@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, User, Bell, Settings, X, Users } from "lucide-react";
+import { Home, User, Bell, Settings, X, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps {
@@ -10,7 +10,6 @@ interface SidebarProps {
 
 const navigation = [
   { name: "Home", icon: Home, path: "/" },
-  { name: "Rooms", icon: MessageSquare, path: "/rooms" },
   { name: "Profile", icon: User, path: "/profile" },
   { name: "Friends", icon: Users, path: "/friends" },
   { name: "Notifications", icon: Bell, path: "/notifications" },
