@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { socketManager } from '@/utils/socket';
 
@@ -10,8 +11,8 @@ interface PeerConnection {
 export const useWebRTC = (roomId: string, userId: string) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -31,6 +32,11 @@ export const useWebRTC = (roomId: string, userId: string) => {
         video: true,
         audio: true,
       });
+      
+      // Initially disable video and audio tracks to match the default state
+      stream.getVideoTracks().forEach(track => track.enabled = false);
+      stream.getAudioTracks().forEach(track => track.enabled = false);
+
       setLocalStream(stream);
       
       if (localVideoRef.current) {

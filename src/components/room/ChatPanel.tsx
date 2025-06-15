@@ -29,12 +29,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isConnected,
 }) => {
   return (
-    <Card className="flex-1">
+    <Card className="flex-1 flex flex-col">
       <CardHeader>
         <CardTitle>Chat</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 flex flex-col">
-        <ScrollArea className="h-64 flex-1">
+      <CardContent className="flex-1 space-y-4 flex flex-col min-h-0">
+        <ScrollArea className="flex-1 pr-4">
           <div className="space-y-2">
             {messages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
@@ -44,7 +44,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               messages.map((msg, index) => (
                 <div key={index} className="p-2 rounded-lg bg-muted">
                   <p className="text-xs text-muted-foreground">{msg.userName}</p>
-                  <p className="text-sm">{msg.message}</p>
+                  <p className="text-sm break-words">{msg.message}</p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(msg.time).toLocaleTimeString()}
                   </p>
