@@ -259,7 +259,7 @@ const Room = () => {
   };
 
   const handleLeaveRoom = () => {
-    navigate('/rooms');
+    navigate('/');
   };
 
   if (!roomId) {
@@ -268,7 +268,7 @@ const Room = () => {
         <Card>
           <CardContent className="pt-6">
             <p>Room ID not found</p>
-            <Button onClick={() => navigate('/rooms')} className="mt-4">
+            <Button onClick={() => navigate('/')} className="mt-4">
               Back to Rooms
             </Button>
           </CardContent>
