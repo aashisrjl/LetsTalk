@@ -1,11 +1,10 @@
-
 const Room = require('../database/models/room.model');
 const User = require('../database/models/user.model');
 
 module.exports = (io) => {
   // In-memory state management
   const roomState = {
-    users: {}, // { roomId: [{ socketId, userId, userName, joinTime }] }
+    users: {}, // { roomId: [{ socketId, userId, userName, joinTime, isAudioEnabled, isVideoEnabled }] }
     owners: {}, // { roomId: ownerUserId }
     sessionTimes: {} // { socketId: startTime }
   };
@@ -126,7 +125,9 @@ module.exports = (io) => {
           userId, 
           userName: user.name, 
           photo: user.photo, 
-          joinTime: new Date() 
+          joinTime: new Date(),
+          isAudioEnabled: true,
+          isVideoEnabled: true,
         };
         
         await addUserToRoom(roomId, userData);
@@ -219,6 +220,23 @@ module.exports = (io) => {
         userName,
         time,
       });
+    });
+    
+    // Media state change handler
+    socket.on('mediaStateChange', ({ userId, mediaType, isEnabled }) => {
+      const { roomId } = socket;
+      if (roomId && roomState.users[roomId]) {
+        const userInRoom = roomState.users[roomId].find(u => u.userId === userId);
+        if (userInRoom) {
+          if (mediaType === 'audio') {
+            userInRoom.isAudioEnabled = isEnabled;
+          } else if (mediaType === 'video') {
+            userInRoom.isVideoEnabled = isEnabled;
+          }
+          emitRoomUpdate(roomId);
+          console.log(`🎤 Media state changed for ${userInRoom.userName} in room ${roomId}: ${mediaType} is ${isEnabled ? 'ON' : 'OFF'}`);
+        }
+      }
     });
 
     // Kick user handler (room owner only)

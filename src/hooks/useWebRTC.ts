@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { socketManager } from '@/utils/socket';
 
@@ -151,22 +150,42 @@ export const useWebRTC = (roomId: string, userId: string) => {
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoEnabled(videoTrack.enabled);
+        const newState = !videoTrack.enabled;
+        videoTrack.enabled = newState;
+        setIsVideoEnabled(newState);
+        const socket = socketManager.getSocket();
+        if (socket && userId) {
+          socket.emit('mediaStateChange', {
+            roomId,
+            userId,
+            mediaType: 'video',
+            isEnabled: newState,
+          });
+        }
       }
     }
-  }, [localStream]);
+  }, [localStream, roomId, userId]);
 
   // Toggle audio
   const toggleAudio = useCallback(() => {
     if (localStream) {
       const audioTrack = localStream.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsAudioEnabled(audioTrack.enabled);
+        const newState = !audioTrack.enabled;
+        audioTrack.enabled = newState;
+        setIsAudioEnabled(newState);
+        const socket = socketManager.getSocket();
+        if (socket && userId) {
+          socket.emit('mediaStateChange', {
+            roomId,
+            userId,
+            mediaType: 'audio',
+            isEnabled: newState,
+          });
+        }
       }
     }
-  }, [localStream]);
+  }, [localStream, roomId, userId]);
 
   // Start screen sharing
   const startScreenShare = useCallback(async () => {

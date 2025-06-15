@@ -339,6 +339,7 @@ const Room = () => {
                   users={users}
                   isVideoEnabled={isVideoEnabled}
                   isAudioEnabled={isAudioEnabled}
+                  localUserId={currentUser.id}
                 />
               </div>
               
