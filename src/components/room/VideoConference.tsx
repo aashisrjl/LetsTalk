@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Video } from 'lucide-react';
@@ -14,7 +13,6 @@ interface User {
 }
 
 interface VideoConferenceProps {
-  localVideoRef: React.RefObject<HTMLVideoElement>;
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
   users: User[];
@@ -29,7 +27,6 @@ interface VideoConferenceProps {
 }
 
 export const VideoConference: React.FC<VideoConferenceProps> = ({
-  localVideoRef,
   localStream,
   remoteStreams,
   users,
@@ -53,7 +50,6 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
       <CardContent className="flex-1 p-4 flex flex-col justify-between">
         <div className="flex-1 min-h-0">
           <VideoGrid
-            localVideoRef={localVideoRef}
             localStream={localStream}
             remoteStreams={remoteStreams}
             users={users}

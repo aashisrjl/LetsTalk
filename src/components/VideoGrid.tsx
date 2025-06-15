@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
 
 interface VideoGridProps {
-  localVideoRef: React.RefObject<HTMLVideoElement>;
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
   users: Array<{
@@ -21,7 +20,6 @@ interface VideoGridProps {
 }
 
 export const VideoGrid: React.FC<VideoGridProps> = ({
-  localVideoRef,
   localStream,
   remoteStreams,
   users,
@@ -29,6 +27,14 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   isAudioEnabled,
   localUserId,
 }) => {
+  const localVideoRef = React.useRef<HTMLVideoElement>(null);
+
+  React.useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
       {/* Local video */}

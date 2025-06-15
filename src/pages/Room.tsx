@@ -128,7 +128,6 @@ const Room = () => {
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
-    localVideoRef,
     initializeLocalStream,
     toggleVideo,
     toggleAudio,
@@ -303,7 +302,6 @@ const Room = () => {
         {/* Video Area */}
         <div className="lg:col-span-3">
           <VideoConference
-            localVideoRef={localVideoRef}
             localStream={localStream}
             remoteStreams={remoteStreams}
             users={users}

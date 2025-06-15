@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { socketManager } from '@/utils/socket';
 
@@ -16,7 +15,6 @@ export const useWebRTC = (roomId: string, userId: string) => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const localVideoRef = useRef<HTMLVideoElement>(null);
 
   const iceServers = {
     iceServers: [
@@ -38,10 +36,6 @@ export const useWebRTC = (roomId: string, userId: string) => {
       stream.getAudioTracks().forEach(track => track.enabled = false);
 
       setLocalStream(stream);
-      
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
       
       console.log('Local stream initialized:', stream);
       return stream;
@@ -305,7 +299,6 @@ export const useWebRTC = (roomId: string, userId: string) => {
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
-    localVideoRef,
     initializeLocalStream,
     toggleVideo,
     toggleAudio,
