@@ -180,17 +180,12 @@ const Rooms = () => {
                       filteredRooms.map((room) => (
                         <RoomCard
                           key={room._id}
-                          title={room.title}
-                          topic={room.topic}
-                          description={room.description}
-                          level={room.level || "Any Level"}
-                          language={room.language || "English"}
-                          participants={room.participants?.length || 0}
-                          maxParticipants={room.maxParticipants || 10}
-                          roomId={room.roomId}
-                          onClick={() => handleJoinRoom(room.roomId)}
-                          thumbnailUrl={`https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`}
-                          likes={Math.floor(Math.random() * 500) + 20}
+                          room={{
+                            ...room,
+                            thumbnailUrl: `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`,
+                            likes: Math.floor(Math.random() * 500) + 20,
+                          }}
+                          onClick={handleJoinRoom}
                         />
                       ))
                     ) : (
