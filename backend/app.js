@@ -1,3 +1,4 @@
+
 // ✅ Load environment variables first
 require('dotenv').config();
 
@@ -61,7 +62,9 @@ const io = socketIO(server, {
     credentials: true,
   },
 });
-require('./socket/roomSocket')(io);
+
+// Initialize both room and chat socket handlers
+require('./socket/socketHandler')(io);
 
 // Start server
 server.listen(port, () => {

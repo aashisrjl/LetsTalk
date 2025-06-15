@@ -8,6 +8,7 @@ interface Message {
   toUserId: string;
   message: string;
   timestamp: string;
+  isRead?: boolean;
 }
 
 export const useChat = (currentUserId: string, friendId: string | null) => {
@@ -26,7 +27,7 @@ export const useChat = (currentUserId: string, friendId: string | null) => {
       
       setIsConnected(true);
 
-      // Listen for chat history
+      // Listen for chat history from database
       socket.on('chatHistory', ({ messages: chatHistory }) => {
         setMessages(chatHistory);
       });
@@ -54,6 +55,9 @@ export const useChat = (currentUserId: string, friendId: string | null) => {
   useEffect(() => {
     const socket = socketRef.current;
     if (socket && currentUserId && friendId) {
+      // Clear previous messages when switching friends
+      setMessages([]);
+      
       // Join private chat room
       socket.emit('joinPrivateChat', { userId: currentUserId, friendId });
       
@@ -76,9 +80,18 @@ export const useChat = (currentUserId: string, friendId: string | null) => {
     }
   };
 
+  const markMessagesAsRead = () => {
+    const socket = socketRef.current;
+    if (socket && currentUserId && friendId) {
+      const chatRoomId = [currentUserId, friendId].sort().join('-');
+      socket.emit('markMessagesRead', { chatRoomId, userId: currentUserId });
+    }
+  };
+
   return {
     messages,
     sendMessage,
+    markMessagesAsRead,
     isConnected,
   };
 };
