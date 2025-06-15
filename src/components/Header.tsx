@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Bell,
   Menu,
@@ -23,13 +22,14 @@ import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { MessageSquare, UserPlus, Calendar } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const [user, setUser] = useState(null); // State to store user data
+  const { user } = useAuth();
   const [showCoffeeModal, setShowCoffeeModal] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   
@@ -110,8 +110,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       if (res.status === 200) {
         console.log('Logout successful');
-        setUser(null); // Clear user state
-        window.location.href = 'http://localhost:8080/auth';
+        window.location.href = '/auth';
       }
     } catch (error) {
       console.error('Error during logout:', error);

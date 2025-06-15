@@ -11,25 +11,32 @@ import Room from './pages/Room';
 import Coffee from './pages/Coffee';
 import Friends from './pages/Friends';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Rooms />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/room/:roomId" element={<Room />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/buy-me-coffee" element={<Coffee />} />
-        </Routes>
-        <Toaster />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Rooms />} />
+            <Route path="/auth" element={<Auth />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/room/:roomId" element={<Room />} />
+              <Route path="/friends" element={<Friends />} />
+              <Route path="/buy-me-coffee" element={<Coffee />} />
+            </Route>
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
