@@ -50,24 +50,19 @@ const Room = () => {
   });
 
   // Create current user object based on auth status
-  const [currentUser] = useState(() => {
-    // This will be updated when authUser loads
-    return {
-      id: '', // Will be set from authUser
-      name: 'Guest User',
-      photo: null,
-    };
-  });
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
 
   // Update current user when auth data loads
   useEffect(() => {
     if (authUser) {
-      currentUser.id = authUser._id || authUser.id;
-      currentUser.name = authUser.name || 'User';
-      currentUser.photo = authUser.photo || null;
-      console.log('Updated current user from auth:', currentUser);
+      setCurrentUser({
+        id: authUser._id || authUser.id,
+        name: authUser.name || 'User',
+        photo: authUser.photo || null,
+      });
+      console.log('Updated current user from auth:', authUser);
     }
-  }, [authUser, currentUser]);
+  }, [authUser]);
 
   console.log('Current user:', currentUser);
 
@@ -129,7 +124,7 @@ const Room = () => {
     sendMessage,
     kickUser,
     isOwner,
-  } = useRoom(roomId || '', currentUser.id, currentUser.name, roomTitle);
+  } = useRoom(roomId || '', currentUser?.id || '', currentUser?.name || 'Guest', roomTitle);
 
   // Initialize WebRTC
   const {
@@ -143,7 +138,7 @@ const Room = () => {
     toggleVideo,
     toggleAudio,
     startScreenShare,
-  } = useWebRTC(roomId || '', currentUser.id);
+  } = useWebRTC(roomId || '', currentUser?.id || '');
 
   console.log('Room hook state:', { users, ownerId, messages, isConnected, isOwner });
 
@@ -166,7 +161,7 @@ const Room = () => {
   });
 
   // Show loading while auth is being checked
-  if (isLoadingAuth) {
+  if (isLoadingAuth || !currentUser) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
@@ -498,7 +493,7 @@ const Room = () => {
           </Card>
         </div>
       </div>
-      {selectedUser && (
+      {selectedUser && currentUser && (
         <UserProfileModal 
           user={selectedUser}
           currentUserId={currentUser.id}
