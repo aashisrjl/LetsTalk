@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, UserCheck, Settings, Heart, Phone } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { RoomInfoModal } from "./RoomInfoModal";
 
 interface Room {
@@ -14,7 +13,7 @@ interface Room {
   description?: string;
   language: string;
   level?: string;
-  participants: { length: number };
+  participants: string[];
   maxParticipants: number;
   tags?: string[];
   likes?: number;
@@ -120,10 +119,7 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
       <RoomInfoModal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
-        room={{
-          ...room,
-          participants: room.participants?.length || 0,
-        }}
+        room={room}
       />
     </>
   );
