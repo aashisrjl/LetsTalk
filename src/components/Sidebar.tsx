@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, User, Bell, Settings, X, Users } from "lucide-react";
+import { Home, User, Bell, Settings, X, Users, FileText } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps {
@@ -14,6 +14,7 @@ const navigation = [
   { name: "Friends", icon: Users, path: "/friends" },
   { name: "Notifications", icon: Bell, path: "/notifications" },
   { name: "Settings", icon: Settings, path: "/settings" },
+  { name: "Privacy Policy", icon: FileText, path: "/privacy-policy" },
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -224,12 +223,6 @@ const Rooms = () => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
         />
-
-        <div className="text-center py-4 border-t">
-          <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:underline">
-            Privacy Policy
-          </Link>
-        </div>
 
         <Footer />
       </div>
