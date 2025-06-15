@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -25,7 +24,7 @@ const Rooms = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -180,15 +179,14 @@ const Rooms = () => {
                         <RoomCard
                           key={room._id}
                           title={room.title}
-                          description={room.description || ""}
-                          level={room.level || "beginner"}
-                          language={room.language || ""}
+                          level={room.level || "Any Level"}
+                          language={room.language || "English"}
                           participants={room.participants?.length || 0}
                           maxParticipants={room.maxParticipants || 10}
-                          isLive={room.isLive || false}
-                          topic={room.topic || "General"}
                           roomId={room.roomId}
                           onClick={() => handleJoinRoom(room.roomId)}
+                          thumbnailUrl={`https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`}
+                          likes={Math.floor(Math.random() * 500) + 20}
                         />
                       ))
                     ) : (
