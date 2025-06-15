@@ -122,7 +122,7 @@ const Friends = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className=" container min-h-screen flex flex-col">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <div className="flex flex-1">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -150,7 +150,7 @@ const Friends = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="container min-h-screen flex flex-col">
       <Header onMenuClick={() => setSidebarOpen(true)} />
       <div className="flex flex-1">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />

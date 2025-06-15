@@ -71,7 +71,7 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
           <div className="flex items-center gap-2">
             <Globe className="h-6 w-6 text-blue-400" />
             <CardTitle className="text-md font-semibold text-white/90">
-              {language || "Language"} {level || "Any Level"}
+              {language || "Language"} | {level || "Any Level"}
             </CardTitle>
           </div>
           <Button variant="ghost" size="icon" className="text-blue-400 hover:bg-gray-800 hover:text-blue-300" onClick={handleSettingsClick}>

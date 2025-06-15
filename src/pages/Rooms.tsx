@@ -142,7 +142,7 @@ const Rooms = () => {
                 </div>
 
                 {/* Room Stats */}
-                <div className="flex gap-4 flex-wrap">
+                <div className="flex gap-6 flex-wrap p-6">
                   <Badge variant="secondary">
                     {filteredRooms.length} rooms available
                   </Badge>
@@ -182,7 +182,7 @@ const Rooms = () => {
                           key={room._id}
                           room={{
                             ...room,
-                            thumbnailUrl: `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`,
+                            thumbnailUrl: `/icon.png`, // from public folder
                             likes: Math.floor(Math.random() * 500) + 20,
                           }}
                           onClick={handleJoinRoom}
