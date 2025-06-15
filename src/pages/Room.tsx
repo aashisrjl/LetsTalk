@@ -12,6 +12,8 @@ import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff, Us
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useWebRTC } from '@/hooks/useWebRTC';
+import { VideoGrid } from '@/components/VideoGrid';
 
 // Helper function to generate a valid MongoDB ObjectId format
 const generateObjectId = () => {
@@ -125,6 +127,20 @@ const Room = () => {
     kickUser,
     isOwner,
   } = useRoom(roomId || '', currentUser.id, currentUser.name, roomTitle);
+
+  // Initialize WebRTC
+  const {
+    localStream,
+    remoteStreams,
+    isVideoEnabled,
+    isAudioEnabled,
+    isScreenSharing,
+    localVideoRef,
+    initializeLocalStream,
+    toggleVideo,
+    toggleAudio,
+    startScreenShare,
+  } = useWebRTC(roomId || '', currentUser.id);
 
   console.log('Room hook state:', { users, ownerId, messages, isConnected, isOwner });
 
@@ -276,14 +292,18 @@ const Room = () => {
     navigate('/rooms');
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    console.log('Mute toggled:', !isMuted);
+  const handleToggleMute = () => {
+    toggleAudio();
+    console.log('Audio toggled:', !isAudioEnabled);
   };
 
-  const toggleVideo = () => {
-    setIsVideoOff(!isVideoOff);
-    console.log('Video toggled:', !isVideoOff);
+  const handleToggleVideo = () => {
+    toggleVideo();
+    console.log('Video toggled:', !isVideoEnabled);
+  };
+
+  const handleScreenShare = () => {
+    startScreenShare();
   };
 
   if (!roomId) {
@@ -349,35 +369,53 @@ const Room = () => {
                 Video Conference
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
-              <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-2">Video conference area</p>
-                  <p className="text-sm text-muted-foreground">
-                    Connection Status: {isConnected ? "Connected" : "Connecting..."}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Users in room: {users.length}
-                  </p>
-                </div>
+            <CardContent className="flex-1 p-4">
+              <div className="h-96 mb-4">
+                <VideoGrid
+                  localVideoRef={localVideoRef}
+                  localStream={localStream}
+                  remoteStreams={remoteStreams}
+                  users={users}
+                  isVideoEnabled={isVideoEnabled}
+                  isAudioEnabled={isAudioEnabled}
+                />
               </div>
               
               {/* Controls */}
-              <div className="flex items-center justify-center gap-4 mt-4">
+              <div className="flex items-center justify-center gap-4">
                 <Button
-                  variant={isMuted ? "destructive" : "outline"}
+                  variant={isAudioEnabled ? "outline" : "destructive"}
                   size="icon"
-                  onClick={toggleMute}
+                  onClick={handleToggleMute}
+                  disabled={!localStream}
                 >
-                  {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                 </Button>
                 <Button
-                  variant={isVideoOff ? "destructive" : "outline"}
+                  variant={isVideoEnabled ? "outline" : "destructive"}
                   size="icon"
-                  onClick={toggleVideo}
+                  onClick={handleToggleVideo}
+                  disabled={!localStream}
                 >
-                  {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                  {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleScreenShare}
+                  disabled={!localStream}
+                  className="text-sm"
+                >
+                  {isScreenSharing ? "Stop Sharing" : "Share Screen"}
+                </Button>
+              </div>
+              
+              <div className="text-center mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Connection: {isConnected ? "Connected" : "Connecting..."}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Users in room: {users.length}
+                </p>
               </div>
             </CardContent>
           </Card>
