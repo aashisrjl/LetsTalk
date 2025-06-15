@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Send, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { useChat } from '@/hooks/useChat';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Sidebar } from '@/components/Sidebar';
@@ -20,7 +21,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch current user's friends
+  // Fetch current user's data
   const { data: userData } = useQuery({
     queryKey: ['currentUserSocial'],
     queryFn: async () => {
@@ -49,6 +50,12 @@ const Chat = () => {
     enabled: !!userData?.friends?.length,
   });
 
+  // Use chat hook for real-time messaging
+  const { messages, sendMessage, isConnected } = useChat(
+    userData?.id, 
+    selectedFriend?.id
+  );
+
   const filteredFriends = friendsData?.filter((friend: any) =>
     friend.name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -56,11 +63,7 @@ const Chat = () => {
   const handleSendMessage = () => {
     if (!message.trim() || !selectedFriend) return;
     
-    // TODO: Implement actual message sending logic
-    toast({
-      title: "Message Sent",
-      description: `Message sent to ${selectedFriend.name}`,
-    });
+    sendMessage(message);
     setMessage('');
   };
 
@@ -76,7 +79,7 @@ const Chat = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Send className="h-5 w-5" />
-                  Friends
+                  Friends {!isConnected && <span className="text-red-500 text-sm">(Offline)</span>}
                 </CardTitle>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -150,17 +153,32 @@ const Chat = () => {
                     {/* Messages Area */}
                     <ScrollArea className="flex-1 p-4">
                       <div className="space-y-4">
-                        {/* Sample messages - replace with actual chat data */}
-                        <div className="flex justify-end">
-                          <div className="bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-xs">
-                            Hello! How are you doing?
+                        {messages.map((msg) => (
+                          <div
+                            key={msg.id}
+                            className={`flex ${
+                              msg.fromUserId === userData?.id ? 'justify-end' : 'justify-start'
+                            }`}
+                          >
+                            <div
+                              className={`rounded-lg px-4 py-2 max-w-xs ${
+                                msg.fromUserId === userData?.id
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted'
+                              }`}
+                            >
+                              <p>{msg.message}</p>
+                              <p className="text-xs opacity-70 mt-1">
+                                {new Date(msg.timestamp).toLocaleTimeString()}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex justify-start">
-                          <div className="bg-muted rounded-lg px-4 py-2 max-w-xs">
-                            Hi! I'm doing great, thanks for asking!
+                        ))}
+                        {messages.length === 0 && (
+                          <div className="text-center text-muted-foreground py-8">
+                            No messages yet. Start the conversation!
                           </div>
-                        </div>
+                        )}
                       </div>
                     </ScrollArea>
                     
@@ -173,11 +191,21 @@ const Chat = () => {
                           onChange={(e) => setMessage(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                           className="flex-1"
+                          disabled={!isConnected}
                         />
-                        <Button onClick={handleSendMessage} size="icon">
+                        <Button 
+                          onClick={handleSendMessage} 
+                          size="icon"
+                          disabled={!isConnected || !message.trim()}
+                        >
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
+                      {!isConnected && (
+                        <p className="text-sm text-red-500 mt-2">
+                          Disconnected - trying to reconnect...
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </>
