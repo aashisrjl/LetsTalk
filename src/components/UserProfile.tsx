@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +16,8 @@ export function UserProfile() {
     name: "",
     bio: "",
     location: "",
-    nativeLanguages: [],
-    learningLanguages: [],
+    nativeLanguages: [] as { name: string, level: string }[],
+    learningLanguages: [] as { name: string, level: string }[],
     joinDate: "",
     photo: "/placeholder.svg",
     stats: {
@@ -27,7 +26,7 @@ export function UserProfile() {
       languagesPracticed: 0,
       sessions: 0,
     },
-    recentActivity: [],
+    recentActivity: [] as { type: string, details: string, timestamp: string }[],
     likes: 0,
     sessions: 0,
     followers: [],
@@ -48,11 +47,11 @@ export function UserProfile() {
             name: user.name || "",
             bio: user.bio || "",
             location: user.location || "",
-            nativeLanguages: user.nativeLanguages.map(lang => ({
+            nativeLanguages: user.nativeLanguages.map((lang: { name: string, level: string }) => ({
               name: lang.name,
               level: lang.level,
             })) || [],
-            learningLanguages: user.learningLanguages.map(lang => ({
+            learningLanguages: user.learningLanguages.map((lang: { name: string, level: string }) => ({
               name: lang.name,
               level: lang.level,
             })) || [],
@@ -229,7 +228,10 @@ export function UserProfile() {
         </CardHeader>
         <CardContent className="space-y-3">
           {userData.recentActivity.length > 0 ? (
-            userData.recentActivity.map((activity, index) => (
+            [...userData.recentActivity]
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .slice(0, 3)
+              .map((activity, index) => (
               <div key={index} className="text-sm">
                 <p className="font-medium">
                   {activity.type === 'session' && `${activity.details} Session`}
