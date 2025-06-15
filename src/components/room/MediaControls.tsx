@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, LogOut } from 'lucide-react';
 
 interface MediaControlsProps {
   isAudioEnabled: boolean;
@@ -11,6 +11,7 @@ interface MediaControlsProps {
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onScreenShare: () => void;
+  onLeaveRoom: () => void;
 }
 
 export const MediaControls: React.FC<MediaControlsProps> = ({
@@ -21,32 +22,44 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
   onToggleAudio,
   onToggleVideo,
   onScreenShare,
+  onLeaveRoom,
 }) => {
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-2 bg-slate-800/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-slate-700">
       <Button
-        variant={isAudioEnabled ? "outline" : "destructive"}
+        variant="ghost"
         size="icon"
         onClick={onToggleAudio}
         disabled={!localStream}
+        className="rounded-full w-10 h-10 hover:bg-slate-700 text-white"
       >
-        {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+        {isAudioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-red-400" />}
       </Button>
       <Button
-        variant={isVideoEnabled ? "outline" : "destructive"}
+        variant="ghost"
         size="icon"
         onClick={onToggleVideo}
         disabled={!localStream}
+        className="rounded-full w-10 h-10 hover:bg-slate-700 text-white"
       >
-        {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+        {isVideoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5 text-red-400" />}
       </Button>
       <Button
-        variant="outline"
+        variant="ghost"
         onClick={onScreenShare}
         disabled={!localStream}
-        className="text-sm"
+        className="rounded-full h-10 px-4 hover:bg-slate-700 text-white data-[active=true]:bg-blue-600"
+        data-active={isScreenSharing}
       >
         {isScreenSharing ? "Stop Sharing" : "Share Screen"}
+      </Button>
+      <Button
+        variant="destructive"
+        size="icon"
+        onClick={onLeaveRoom}
+        className="rounded-full w-10 h-10 ml-2"
+      >
+        <LogOut className="w-5 h-5" />
       </Button>
     </div>
   );

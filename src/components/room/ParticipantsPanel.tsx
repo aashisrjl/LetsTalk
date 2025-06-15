@@ -36,27 +36,27 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
       <ScrollArea className="flex-1">
         <div className="space-y-3">
           {users.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-sm text-slate-400 text-center py-4">
               {isConnected ? "You are the only one here." : "Connecting to room..."}
             </p>
           ) : (
             users.map((user) => (
               <div 
                 key={user.userId} 
-                className="flex items-center justify-between p-2 rounded-lg border cursor-pointer hover:bg-muted"
+                className="flex items-center justify-between p-2 rounded-lg border border-transparent cursor-pointer hover:bg-slate-700/50 hover:border-slate-600"
                 onClick={() => onViewProfile(user.userId)}
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={user.photo} />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-slate-600 text-slate-200">
                       {user.userName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex items-center gap-1">
-                    <p className="text-sm font-medium">{user.userName}</p>
+                    <p className="text-sm font-medium text-slate-200">{user.userName}</p>
                     {user.userId === ownerId && (
-                      <Crown className="w-3 h-3 text-yellow-500" />
+                      <Crown className="w-4 h-4 text-yellow-500" />
                     )}
                   </div>
                 </div>
@@ -69,9 +69,9 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                       e.stopPropagation();
                       onKickUser(user.userId)
                     }}
-                    className="h-6 w-6"
+                    className="h-7 w-7 text-slate-400 hover:bg-red-500/20 hover:text-red-400"
                   >
-                    <UserMinus className="w-3 h-3" />
+                    <UserMinus className="w-4 h-4" />
                   </Button>
                 )}
               </div>

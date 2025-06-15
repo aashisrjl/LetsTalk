@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -5,9 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRoom } from '@/hooks/useRoom';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { Toaster } from '@/components/ui/toaster';
-import { RoomHeader } from '@/components/room/RoomHeader';
 import { VideoConference } from '@/components/room/VideoConference';
 import { SidePanel } from '@/components/room/SidePanel';
+import { MediaControls } from '@/components/room/MediaControls';
 
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -80,19 +81,24 @@ const Room = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-slate-900 text-slate-100 font-sans">
       <Toaster />
-      <div className="container mx-auto p-4 flex-1 flex flex-col min-h-0">
-        <RoomHeader
-          roomTitle={roomTitle}
-          roomId={roomId!}
-          roomData={roomData}
-          isConnected={isConnected}
-          onLeaveRoom={handleLeaveRoom}
-        />
+      
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+          <MediaControls
+            isAudioEnabled={isAudioEnabled}
+            isVideoEnabled={isVideoEnabled}
+            isScreenSharing={isScreenSharing}
+            localStream={localStream}
+            onToggleAudio={toggleAudio}
+            onToggleVideo={toggleVideo}
+            onScreenShare={startScreenShare}
+            onLeaveRoom={handleLeaveRoom}
+          />
+        </div>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-          <div className="lg:col-span-3 h-full min-h-0">
+        <div className="flex-1 flex items-center justify-center">
             <VideoConference
               localStream={localStream}
               remoteStreams={remoteStreams}
@@ -100,29 +106,26 @@ const Room = () => {
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               localUserId={(userData as any)._id}
-              isScreenSharing={isScreenSharing}
-              toggleAudio={toggleAudio}
-              toggleVideo={toggleVideo}
-              startScreenShare={startScreenShare}
               isConnected={isConnected}
             />
-          </div>
-          <div className="lg:col-span-1 flex flex-col h-full min-h-0">
-            <SidePanel
-              messages={messages}
-              messageInput={messageInput}
-              setMessageInput={setMessageInput}
-              onSendMessage={handleSendMessage}
-              users={users}
-              ownerId={ownerId}
-              currentUserId={(userData as any)._id}
-              isOwner={isOwner}
-              onKickUser={kickUser}
-              onViewProfile={(userId) => console.log('View profile:', userId)}
-              isConnected={isConnected}
-            />
-          </div>
         </div>
+      </div>
+      
+      <div className="w-[350px] bg-slate-800/50 border-l border-slate-700 h-full flex flex-col">
+        <SidePanel
+          messages={messages}
+          messageInput={messageInput}
+          setMessageInput={setMessageInput}
+          onSendMessage={handleSendMessage}
+          users={users}
+          ownerId={ownerId}
+          currentUserId={(userData as any)._id}
+          isOwner={isOwner}
+          onKickUser={kickUser}
+          onViewProfile={(userId) => console.log('View profile:', userId)}
+          isConnected={isConnected}
+          roomData={roomData}
+        />
       </div>
     </div>
   );
