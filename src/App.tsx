@@ -12,7 +12,6 @@ import Rooms from './pages/Rooms';
 import Room from './pages/Room';
 import Coffee from './pages/Coffee';
 import Friends from './pages/Friends';
-import Chat from './pages/Chat';
 import { Toaster } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient();
@@ -31,7 +30,6 @@ function App() {
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/room/:roomId" element={<Room />} />
           <Route path="/friends" element={<Friends />} />
-          <Route path="/chat" element={<Chat />} />
           <Route path="/buy-me-coffee" element={<Coffee />} />
         </Routes>
         <Toaster />
