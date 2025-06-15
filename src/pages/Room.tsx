@@ -2,19 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '@/hooks/useRoom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useWebRTC } from '@/hooks/useWebRTC';
-import { VideoGrid } from '@/components/VideoGrid';
 import { UserProfileModal } from '@/components/userProfileModal';
+import { RoomHeader } from '@/components/room/RoomHeader';
+import { VideoConference } from '@/components/room/VideoConference';
+import { ParticipantsPanel } from '@/components/room/ParticipantsPanel';
+import { ChatPanel } from '@/components/room/ChatPanel';
 
 // Helper function to generate a valid MongoDB ObjectId format
 const generateObjectId = () => {
@@ -33,7 +30,7 @@ const Room = () => {
   console.log('Room component loaded with roomId:', roomId);
   
   // Try to get authenticated user data first
-  const { data: authUser, isLoading: isLoadingAuth, error: authError } = useQuery({
+  const { data: authUser, isLoading: isLoadingAuth } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
       try {
@@ -70,8 +67,6 @@ const Room = () => {
   const [roomData, setRoomData] = useState(null);
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
   const [messageInput, setMessageInput] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
 
@@ -139,6 +134,20 @@ const Room = () => {
     toggleAudio,
     startScreenShare,
   } = useWebRTC(roomId || '', currentUser?.id || '');
+
+  // Initialize local stream
+  useEffect(() => {
+    if (currentUser?.id && isConnected) {
+      initializeLocalStream().catch(err => {
+        console.error("Error initializing local stream", err);
+        toast({
+          title: "Camera/Mic Error",
+          description: "Could not access your camera or microphone. Please check permissions.",
+          variant: "destructive"
+        })
+      })
+    }
+  }, [currentUser, isConnected, initializeLocalStream, toast]);
 
   console.log('Room hook state:', { users, ownerId, messages, isConnected, isOwner });
 
@@ -253,20 +262,6 @@ const Room = () => {
     navigate('/rooms');
   };
 
-  const handleToggleMute = () => {
-    toggleAudio();
-    console.log('Audio toggled:', !isAudioEnabled);
-  };
-
-  const handleToggleVideo = () => {
-    toggleVideo();
-    console.log('Video toggled:', !isVideoEnabled);
-  };
-
-  const handleScreenShare = () => {
-    startScreenShare();
-  };
-
   if (!roomId) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -296,202 +291,52 @@ const Room = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 h-screen flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{roomTitle}</h1>
-          <p className="text-muted-foreground">Room ID: {roomId}</p>
-          {roomData && (
-            <div className="flex gap-2 mt-2">
-              <Badge variant="outline">{roomData.language}</Badge>
-              <Badge variant="outline">{roomData.level}</Badge>
-              <Badge variant="outline">{roomData.participants?.length || 0}/{roomData.maxParticipants} participants</Badge>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={isConnected ? "default" : "destructive"}>
-            {isConnected ? "Connected" : "Disconnected"}
-          </Badge>
-          <Button variant="outline" onClick={handleLeaveRoom}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Leave Room
-          </Button>
-        </div>
-      </div>
+      <RoomHeader
+        roomTitle={roomTitle}
+        roomId={roomId!}
+        roomData={roomData}
+        isConnected={isConnected}
+        onLeaveRoom={handleLeaveRoom}
+      />
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
         {/* Video Area */}
         <div className="lg:col-span-3">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="w-5 h-5" />
-                Video Conference
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 p-4">
-              <div className="h-96 mb-4">
-                <VideoGrid
-                  localVideoRef={localVideoRef}
-                  localStream={localStream}
-                  remoteStreams={remoteStreams}
-                  users={users}
-                  isVideoEnabled={isVideoEnabled}
-                  isAudioEnabled={isAudioEnabled}
-                  localUserId={currentUser.id}
-                />
-              </div>
-              
-              {/* Controls */}
-              <div className="flex items-center justify-center gap-4">
-                <Button
-                  variant={isAudioEnabled ? "outline" : "destructive"}
-                  size="icon"
-                  onClick={handleToggleMute}
-                  disabled={!localStream}
-                >
-                  {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant={isVideoEnabled ? "outline" : "destructive"}
-                  size="icon"
-                  onClick={handleToggleVideo}
-                  disabled={!localStream}
-                >
-                  {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleScreenShare}
-                  disabled={!localStream}
-                  className="text-sm"
-                >
-                  {isScreenSharing ? "Stop Sharing" : "Share Screen"}
-                </Button>
-              </div>
-              
-              <div className="text-center mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Connection: {isConnected ? "Connected" : "Connecting..."}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Users in room: {users.length}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <VideoConference
+            localVideoRef={localVideoRef}
+            localStream={localStream}
+            remoteStreams={remoteStreams}
+            users={users}
+            isVideoEnabled={isVideoEnabled}
+            isAudioEnabled={isAudioEnabled}
+            localUserId={currentUser.id}
+            isScreenSharing={isScreenSharing}
+            toggleAudio={toggleAudio}
+            toggleVideo={toggleVideo}
+            startScreenShare={startScreenShare}
+            isConnected={isConnected}
+          />
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Participants */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Participants ({users.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-3">
-                  {users.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      {isConnected ? "No other users connected" : "Connecting to room..."}
-                    </p>
-                  ) : (
-                    users.map((user) => (
-                      <div 
-                        key={user.userId} 
-                        className="flex items-center justify-between p-2 rounded-lg border cursor-pointer hover:bg-muted"
-                        onClick={() => handleViewProfile(user.userId)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={user.photo} />
-                            <AvatarFallback>
-                              {user.userName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{user.userName}</p>
-                            {user.userId === ownerId && (
-                              <Crown className="w-3 h-3 text-yellow-500" />
-                            )}
-                          </div>
-                        </div>
-                        
-                        {user.userId !== currentUser.id && isOwner && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleKickUser(user.userId)
-                              }}
-                              className="h-6 w-6"
-                            >
-                              <UserMinus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+        <div className="space-y-6 flex flex-col">
+          <ParticipantsPanel
+            users={users}
+            ownerId={ownerId}
+            currentUserId={currentUser.id}
+            isOwner={isOwner}
+            isConnected={isConnected}
+            onKickUser={handleKickUser}
+            onViewProfile={handleViewProfile}
+          />
 
-          {/* Chat */}
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle>Chat</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {messages.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No messages yet. Start the conversation!
-                    </p>
-                  ) : (
-                    messages.map((msg, index) => (
-                      <div key={index} className="p-2 rounded-lg bg-muted">
-                        <p className="text-xs text-muted-foreground">{msg.userName}</p>
-                        <p className="text-sm">{msg.message}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(msg.time).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-              
-              <Separator />
-              
-              <form onSubmit={handleSendMessage} className="flex gap-2">
-                <Input
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder="Type a message..."
-                  disabled={!isConnected}
-                />
-                <Button type="submit" size="icon" disabled={!isConnected || !messageInput.trim()}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-              
-              {!isConnected && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Connecting to chat...
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <ChatPanel
+            messages={messages}
+            messageInput={messageInput}
+            setMessageInput={setMessageInput}
+            onSendMessage={handleSendMessage}
+            isConnected={isConnected}
+          />
         </div>
       </div>
       {selectedUser && currentUser && (
