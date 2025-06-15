@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -106,7 +105,6 @@ const Room = () => {
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               localUserId={(userData as any)._id}
-              isConnected={isConnected}
             />
         </div>
       </div>

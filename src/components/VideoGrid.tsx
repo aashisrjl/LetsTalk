@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Users } from 'lucide-react';
 
 interface VideoGridProps {
   localStream: MediaStream | null;
@@ -44,13 +44,14 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     return "grid-cols-4"; // 4x4 for more
   };
 
-  const layoutClass = getGridLayout(users.length);
+  const totalCells = users.length === 1 ? 2 : users.length;
+  const layoutClass = getGridLayout(totalCells);
 
   return (
-    <div className={`grid ${layoutClass} gap-4 h-full`}>
+    <div className={`grid ${layoutClass} gap-4 w-full max-w-7xl`}>
       {/* Local video */}
-      <Card className="relative overflow-hidden">
-        <div className="aspect-video bg-gray-100 flex items-center justify-center">
+      <Card className="relative overflow-hidden aspect-video bg-slate-800">
+        <div className="w-full h-full flex items-center justify-center">
           {localStream && isVideoEnabled ? (
             <video
               ref={localVideoRef}
@@ -60,11 +61,11 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center justify-center text-slate-300">
               <Avatar className="w-16 h-16 mb-2">
-                <AvatarFallback>You</AvatarFallback>
+                <AvatarFallback className="bg-slate-700">You</AvatarFallback>
               </Avatar>
-              <p className="text-sm text-muted-foreground">You</p>
+              <p className="text-sm">You</p>
             </div>
           )}
         </div>
@@ -101,8 +102,8 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           const isRemoteAudioEnabled = user.isAudioEnabled !== false;
 
           return (
-            <Card key={user.userId} className="relative overflow-hidden">
-              <div className="aspect-video bg-gray-100 flex items-center justify-center">
+            <Card key={user.userId} className="relative overflow-hidden aspect-video bg-slate-800">
+              <div className="w-full h-full flex items-center justify-center">
                 {stream && isRemoteVideoEnabled ? (
                   <video
                     autoPlay
@@ -115,15 +116,15 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                     }}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center">
+                  <div className="flex flex-col items-center justify-center text-slate-300">
                     <Avatar className="w-16 h-16 mb-2">
                       <AvatarImage src={user.photo} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-slate-700">
                         {user.userName.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <p className="text-sm text-muted-foreground">{user.userName}</p>
-                    {!isRemoteVideoEnabled && <p className="text-xs text-muted-foreground mt-1">Video Off</p>}
+                    <p className="text-sm">{user.userName}</p>
+                    {!isRemoteVideoEnabled && <p className="text-xs text-slate-400 mt-1">Video Off</p>}
                   </div>
                 )}
               </div>
@@ -143,6 +144,18 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             </Card>
           );
         })}
+      
+      {users.length === 1 && (
+        <Card className="aspect-video relative overflow-hidden border-2 border-dashed border-slate-700 bg-slate-800/50 flex items-center justify-center">
+          <div className="text-center text-slate-500">
+            <div className="w-20 h-20 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center mb-3">
+              <Users className="h-8 w-8 text-slate-600" />
+            </div>
+            <p className="font-medium">Waiting for others...</p>
+            <p className="text-xs">Invite someone to join you.</p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
