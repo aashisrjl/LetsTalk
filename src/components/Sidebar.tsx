@@ -1,7 +1,6 @@
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, User, Bell, Settings, X, Users, MessageCircle } from "lucide-react";
+import { Home, MessageSquare, User, Bell, Settings, X, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps {
@@ -14,7 +13,6 @@ const navigation = [
   { name: "Rooms", icon: MessageSquare, path: "/rooms" },
   { name: "Profile", icon: User, path: "/profile" },
   { name: "Friends", icon: Users, path: "/friends" },
-  { name: "Chat", icon: MessageCircle, path: "/chat" },
   { name: "Notifications", icon: Bell, path: "/notifications" },
   { name: "Settings", icon: Settings, path: "/settings" },
 ];
