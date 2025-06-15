@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
   UserPlus,
   UserCheck,
   MessageSquare,
+  Heart,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from '@/hooks/use-toast';
@@ -28,22 +30,40 @@ interface UserProfileModalProps {
   user: {
     _id: string;
     name: string;
-    email: string;
+    email?: string;
     photo?: string;
     bio?: string;
     location?: string;
-    createdAt?: string;
+    joinDate?: string;
+    likes?: number;
+    followers?: string[];
+    friends?: string[];
+    likedBy?: string[];
   };
+  currentUserId: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProps) => {
+export const UserProfileModal = ({ user, currentUserId, isOpen, onClose }: UserProfileModalProps) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
+  const [likesCount, setLikesCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setIsFollowing(user.followers?.includes(currentUserId) || false);
+      setIsFriend(user.friends?.includes(currentUserId) || false);
+      setHasLiked(user.likedBy?.includes(currentUserId) || false);
+      setFollowersCount(user.followers?.length || 0);
+      setFriendsCount(user.friends?.length || 0);
+      setLikesCount(user.likes || 0);
+    }
+  }, [user, currentUserId]);
 
   const handleFollow = async () => {
     try {
@@ -164,6 +184,37 @@ export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProp
       setActionLoading(false);
     }
   };
+  
+  const handleLike = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post(
+        `http://localhost:3000/users/${user._id}/likes`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (response.data.success) {
+        setLikesCount(response.data.user.likes);
+        setHasLiked(true);
+        toast({
+          title: "Success",
+          description: `You liked ${user.name}!`,
+        });
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to like user';
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (!user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -175,12 +226,8 @@ export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProp
               <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             {user.name}
-            <Badge variant="secondary">
-              {isFollowing ? "Following" : "Not Following"}
-            </Badge>
-            <Badge variant="outline">
-              {isFriend ? "Friend" : "Not Friend"}
-            </Badge>
+            {isFollowing && <Badge variant="secondary">Following</Badge>}
+            {isFriend && <Badge variant="outline">Friend</Badge>}
           </DialogTitle>
           <DialogDescription>
             {user.bio || "No bio available"}
@@ -189,52 +236,53 @@ export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProp
 
         <Separator />
 
-        <div className="py-4">
+        <div className="py-4 grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <p>
-              {user.name}
-            </p>
+            <User className="h-4 w-4 text-muted-foreground" />
+            <p>{user.name}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            <p>
-              {user.email}
-            </p>
-          </div>
-          {user.location && (
+          {user.email && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <p>
-                {user.location}
-              </p>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <p>{user.email}</p>
             </div>
           )}
-          {user.createdAt && (
+          {user.location && (
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <p>
-                Joined {new Date(user.createdAt).toLocaleDateString()}
-              </p>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <p>{user.location}</p>
+            </div>
+          )}
+          {user.joinDate && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <p>Joined {new Date(user.joinDate).toLocaleDateString()}</p>
             </div>
           )}
         </div>
 
         <Separator />
-
-        <DialogFooter className="flex justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Users className="h-5 w-5" />
-              <p>{followersCount} Followers</p>
+        
+        <div className="py-4 flex justify-around">
+            <div className="text-center">
+              <p className="font-semibold text-lg">{likesCount}</p>
+              <p className="text-sm text-muted-foreground">Likes</p>
             </div>
-            <div className="flex items-center gap-1">
-              <UserCheck className="h-5 w-5" />
-              <p>{friendsCount} Friends</p>
+            <div className="text-center">
+              <p className="font-semibold text-lg">{followersCount}</p>
+              <p className="text-sm text-muted-foreground">Followers</p>
             </div>
-          </div>
+            <div className="text-center">
+              <p className="font-semibold text-lg">{friendsCount}</p>
+              <p className="text-sm text-muted-foreground">Friends</p>
+            </div>
+        </div>
 
-          <div className="flex gap-2">
+        <DialogFooter className="flex justify-end gap-2">
+            <Button onClick={handleLike} disabled={actionLoading || hasLiked}>
+              <Heart className="h-4 w-4 mr-2" />
+              {hasLiked ? 'Liked' : 'Like'}
+            </Button>
             {!isFollowing ? (
               <Button onClick={handleFollow} disabled={actionLoading}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -248,7 +296,7 @@ export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProp
 
             {!isFriend ? (
               <Button onClick={handleAddFriend} disabled={actionLoading}>
-                <UserPlus className="h-4 w-4 mr-2" />
+                <Users className="h-4 w-4 mr-2" />
                 Add Friend
               </Button>
             ) : (
@@ -257,7 +305,6 @@ export const UserProfileModal = ({ user, isOpen, onClose }: UserProfileModalProp
                 Remove Friend
               </Button>
             )}
-          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

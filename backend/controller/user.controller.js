@@ -1,3 +1,4 @@
+
 const { User2 } = require("lucide-react");
 const User = require("../database/models/user.model"); // Adjust the path as necessary
 
@@ -46,16 +47,22 @@ exports.getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.status(200).json({ success: true, user: { id: user._id, name: user.name, photo: user.photo, 
-      joinDate: user.joinDate, // Include join date if needed
-      likes: user.likes, // Include likes count if needed
-      sessions: user.sessions, // Include sessions count if needed
-      stats: user.stats, // Include stats if needed
-      bio: user.bio, // Include bio if needed
-      location: user.location, // Include location if needed
-      nativeLanguages: user.nativeLanguages, // Include native languages if needed
-      learningLanguages: user.learningLanguages // Include learning languages if needed
-      
+    res.status(200).json({ success: true, user: { 
+      _id: user._id,
+      name: user.name, 
+      photo: user.photo, 
+      joinDate: user.joinDate,
+      likes: user.likes,
+      sessions: user.sessions,
+      stats: user.stats,
+      bio: user.bio,
+      location: user.location,
+      nativeLanguages: user.nativeLanguages,
+      learningLanguages: user.learningLanguages,
+      followers: user.followers,
+      following: user.following,
+      friends: user.friends,
+      likedBy: user.likedBy
     } });
   } catch (error) {
     console.error('Error fetching user:', error);

@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff, UserPlus, Heart } from 'lucide-react';
+import { Send, Users, Crown, UserMinus, LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { VideoGrid } from '@/components/VideoGrid';
+import { UserProfileModal } from '@/components/userProfileModal';
 
 // Helper function to generate a valid MongoDB ObjectId format
 const generateObjectId = () => {
@@ -66,7 +67,7 @@ const Room = () => {
       currentUser.photo = authUser.photo || null;
       console.log('Updated current user from auth:', currentUser);
     }
-  }, [authUser]);
+  }, [authUser, currentUser]);
 
   console.log('Current user:', currentUser);
 
@@ -76,6 +77,8 @@ const Room = () => {
   const [messageInput, setMessageInput] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [isProfileModalOpen, setProfileModalOpen] = useState(false);
 
   // Fetch room data first
   useEffect(() => {
@@ -226,66 +229,29 @@ const Room = () => {
     }
   };
 
-  const handleFollowUser = async (userId: string) => {
+  const handleViewProfile = async (userId: string) => {
+    if (userId === currentUser.id) return;
     try {
-      await axios.post(`http://localhost:3000/users/${userId}/follow`, {}, {
+      const response = await axios.get(`http://localhost:3000/users/${userId}`, {
         withCredentials: true,
       });
-      toast({
-        title: "User Followed",
-        description: "You are now following this user",
-      });
+      if (response.data.success) {
+        setSelectedUser(response.data.user);
+        setProfileModalOpen(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not fetch user profile",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to follow user",
+        description: "Failed to fetch user profile.",
         variant: "destructive",
       });
     }
-  };
-
-  const handleAddFriend = async (userId: string) => {
-    try {
-      await axios.post(`http://localhost:3000/users/${userId}/friend`, {}, {
-        withCredentials: true,
-      });
-      toast({
-        title: "Friend Request Sent",
-        description: "Friend request has been sent",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send friend request",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLikeUser = async (userId: string) => {
-    try {
-      await axios.post(`http://localhost:3000/users/${userId}/likes`, {}, {
-        withCredentials: true,
-      });
-      toast({
-        title: "User Liked",
-        description: "You liked this user",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to like user",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const isUserFollowed = (userId: string) => {
-    return currentUserData?.following?.includes(userId) || false;
-  };
-
-  const isUserFriend = (userId: string) => {
-    return currentUserData?.friends?.includes(userId) || false;
   };
 
   const handleLeaveRoom = () => {
@@ -436,11 +402,15 @@ const Room = () => {
                 <div className="space-y-3">
                   {users.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      {isConnected ? "No users connected" : "Connecting to room..."}
+                      {isConnected ? "No other users connected" : "Connecting to room..."}
                     </p>
                   ) : (
                     users.map((user) => (
-                      <div key={user.userId} className="flex items-center justify-between p-2 rounded-lg border">
+                      <div 
+                        key={user.userId} 
+                        className="flex items-center justify-between p-2 rounded-lg border cursor-pointer hover:bg-muted"
+                        onClick={() => handleViewProfile(user.userId)}
+                      >
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
                             <AvatarImage src={user.photo} />
@@ -456,50 +426,19 @@ const Room = () => {
                           </div>
                         </div>
                         
-                        {user.userId !== currentUser.id && (
+                        {user.userId !== currentUser.id && isOwner && (
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleLikeUser(user.userId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleKickUser(user.userId)
+                              }}
                               className="h-6 w-6"
                             >
-                              <Heart className="w-3 h-3" />
+                              <UserMinus className="w-3 h-3" />
                             </Button>
-                            
-                            {!isUserFollowed(user.userId) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleFollowUser(user.userId)}
-                                className="h-6 w-6"
-                              >
-                                <UserPlus className="w-3 h-3" />
-                              </Button>
-                            )}
-                            
-                            {!isUserFriend(user.userId) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleAddFriend(user.userId)}
-                                className="h-6 w-6"
-                                title="Add Friend"
-                              >
-                                <Users className="w-3 h-3" />
-                              </Button>
-                            )}
-                            
-                            {isOwner && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleKickUser(user.userId)}
-                                className="h-6 w-6"
-                              >
-                                <UserMinus className="w-3 h-3" />
-                              </Button>
-                            )}
                           </div>
                         )}
                       </div>
@@ -559,6 +498,14 @@ const Room = () => {
           </Card>
         </div>
       </div>
+      {selectedUser && (
+        <UserProfileModal 
+          user={selectedUser}
+          currentUserId={currentUser.id}
+          isOpen={isProfileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
