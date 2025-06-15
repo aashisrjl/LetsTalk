@@ -56,6 +56,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     isPrivate: false,
     tags: [] as string[],
     level: "beginner",
+    topic: "",
   });
 
   const [newTag, setNewTag] = useState("");
@@ -94,7 +95,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         tags: roomData.tags,
         level: roomData.level,
         supports: ["video", "audio", "text"],
-        topic: "General",
+        topic: roomData.topic || "General",
       };
 
       console.log('Sending payload:', payload);
@@ -163,6 +164,19 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               value={roomData.title}
               onChange={(e) =>
                 setRoomData((prev) => ({ ...prev, title: e.target.value }))
+              }
+            />
+          </div>
+
+          {/* Topic */}
+          <div>
+            <Label htmlFor="topic">Topic</Label>
+            <Input
+              id="topic"
+              placeholder="e.g., Travel, Hobbies, Technology"
+              value={roomData.topic}
+              onChange={(e) =>
+                setRoomData((prev) => ({ ...prev, topic: e.target.value }))
               }
             />
           </div>

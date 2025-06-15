@@ -1,9 +1,11 @@
+
 const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
   roomId: { type: String, required: true, unique: true }, // e.g., CR947
 
   title: { type: String, required: true },
+  topic: { type: String, default: 'General' },
   description: { type: String },
 
   language: { type: String, required: true },
