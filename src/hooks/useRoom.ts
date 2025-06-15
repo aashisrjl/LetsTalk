@@ -32,6 +32,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     console.log('Attempting to connect to room...');
     const socket = socketManager.connect();
     
+    // By removing all listeners before adding new ones, we prevent duplicate listeners
+    // that can happen during component re-renders, ensuring user updates are handled correctly.
+    socketManager.removeAllListeners();
+    
     socket.on('connect', () => {
       console.log('✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
