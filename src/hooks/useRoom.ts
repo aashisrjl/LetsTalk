@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { socketManager } from '@/utils/socket';
 import { useToast } from '@/hooks/use-toast';
 
 interface RoomUser {
+  _id: string; // Use _id from MongoDB
   socketId: string;
   userId: string;
   userName: string;
@@ -35,8 +35,20 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     // By removing all listeners before adding new ones, we prevent duplicate listeners
     // that can happen during component re-renders, ensuring user updates are handled correctly.
     socketManager.removeAllListeners();
+
+    const connectionTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        console.warn('⏰ Connection timeout');
+        toast({
+          title: "Connection Timeout",
+          description: "Taking longer than expected to connect. Please check your internet connection.",
+          variant: "destructive",
+        });
+      }
+    }, 10000);
     
     socket.on('connect', () => {
+      clearTimeout(connectionTimeout);
       console.log('✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
       console.log('Joining room with data:', { roomId, userId, userName, roomTitle });
@@ -112,33 +124,15 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       });
     });
 
-    // Add timeout for connection
-    const connectionTimeout = setTimeout(() => {
-      if (!socket.connected) {
-        console.warn('⏰ Connection timeout');
-        toast({
-          title: "Connection Timeout",
-          description: "Taking longer than expected to connect. Please check your internet connection.",
-          variant: "destructive",
-        });
-      }
-    }, 10000);
-
-    socket.on('connect', () => {
-      clearTimeout(connectionTimeout);
-    });
-
   }, [roomId, userId, userName, roomTitle, toast]);
 
   const disconnectFromRoom = useCallback(() => {
     console.log('Disconnecting from room...');
-    if (isConnected) {
-      socketManager.leaveRoom(roomId, userId);
-      socketManager.removeAllListeners();
-      socketManager.disconnect();
-      setIsConnected(false);
-    }
-  }, [roomId, userId, isConnected]);
+    socketManager.leaveRoom(roomId, userId);
+    socketManager.removeAllListeners();
+    socketManager.disconnect();
+    setIsConnected(false);
+  }, [roomId, userId]);
 
   const sendMessage = useCallback((message: string) => {
     console.log('Sending message:', message);
