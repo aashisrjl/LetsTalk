@@ -1,6 +1,5 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -28,52 +27,58 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onSendMessage,
   isConnected,
 }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
   return (
-    <Card className="flex-1 flex flex-col">
-      <CardHeader>
-        <CardTitle>Chat</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-4 flex flex-col min-h-0">
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-2">
-            {messages.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No messages yet. Start the conversation!
-              </p>
-            ) : (
-              messages.map((msg, index) => (
-                <div key={index} className="p-2 rounded-lg bg-muted">
-                  <p className="text-xs text-muted-foreground">{msg.userName}</p>
-                  <p className="text-sm break-words">{msg.message}</p>
+    <div className="h-full flex flex-col p-4 space-y-4">
+      <ScrollArea className="flex-1 pr-4">
+        <div className="space-y-2">
+          {messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No messages yet. Start the conversation!
+            </p>
+          ) : (
+            messages.map((msg, index) => (
+              <div key={index} className="p-2 rounded-lg bg-muted">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-primary">{msg.userName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(msg.time).toLocaleTimeString()}
+                    {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-        
-        <Separator />
-        
-        <form onSubmit={onSendMessage} className="flex gap-2">
-          <Input
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            placeholder="Type a message..."
-            disabled={!isConnected}
-          />
-          <Button type="submit" size="icon" disabled={!isConnected || !messageInput.trim()}>
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
-        
-        {!isConnected && (
-          <p className="text-xs text-muted-foreground text-center">
-            Connecting to chat...
-          </p>
-        )}
-      </CardContent>
-    </Card>
+                <p className="text-sm break-words">{msg.message}</p>
+              </div>
+            ))
+          )}
+          <div ref={scrollRef} />
+        </div>
+      </ScrollArea>
+      
+      <Separator />
+      
+      <form onSubmit={onSendMessage} className="flex gap-2">
+        <Input
+          value={messageInput}
+          onChange={(e) => setMessageInput(e.target.value)}
+          placeholder="Type a message..."
+          disabled={!isConnected}
+        />
+        <Button type="submit" size="icon" disabled={!isConnected || !messageInput.trim()}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </form>
+      
+      {!isConnected && (
+        <p className="text-xs text-muted-foreground text-center">
+          Connecting to chat...
+        </p>
+      )}
+    </div>
   );
 };
