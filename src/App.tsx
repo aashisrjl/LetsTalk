@@ -10,6 +10,7 @@ import Rooms from './pages/Rooms';
 import Room from './pages/Room';
 import Coffee from './pages/Coffee';
 import Friends from './pages/Friends';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -24,6 +25,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Rooms />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/settings" element={<Settings />} />

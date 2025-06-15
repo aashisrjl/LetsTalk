@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -90,7 +91,7 @@ const Rooms = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <div className="container mx-auto p-2">
+        <div className="container mx-auto p-2 flex-grow">
           <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
           <div className="flex mt-4">
@@ -223,6 +224,12 @@ const Rooms = () => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
         />
+
+        <div className="text-center py-4 border-t">
+          <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:underline">
+            Privacy Policy
+          </Link>
+        </div>
 
         <Footer />
       </div>
