@@ -35,8 +35,19 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     }
   }, [localStream]);
 
+  const getGridLayout = (count: number) => {
+    if (count <= 1) return "grid-cols-1";
+    if (count <= 2) return "grid-cols-2";
+    if (count <= 4) return "grid-cols-2"; // 2x2 for 3-4 users
+    if (count <= 6) return "grid-cols-3"; // 2x3 for 5-6 users
+    if (count <= 9) return "grid-cols-3"; // 3x3 for 7-9 users
+    return "grid-cols-4"; // 4x4 for more
+  };
+
+  const layoutClass = getGridLayout(users.length);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+    <div className={`grid ${layoutClass} gap-4 h-full`}>
       {/* Local video */}
       <Card className="relative overflow-hidden">
         <div className="aspect-video bg-gray-100 flex items-center justify-center">

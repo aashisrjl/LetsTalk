@@ -30,6 +30,7 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
   onKickUser,
   onViewProfile,
 }) => {
+  console.log("ParticipantsPanel rendered with users:", users);
   return (
     <div className="h-full flex flex-col p-4">
       <ScrollArea className="flex-1">

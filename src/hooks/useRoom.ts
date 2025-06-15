@@ -9,6 +9,8 @@ interface RoomUser {
   userName: string;
   photo?: string;
   joinTime: Date;
+  isAudioEnabled?: boolean;
+  isVideoEnabled?: boolean;
 }
 
 interface ChatMessage {
