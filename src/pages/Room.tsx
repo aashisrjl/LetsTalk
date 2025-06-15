@@ -29,16 +29,42 @@ const Room = () => {
   
   console.log('Room component loaded with roomId:', roomId);
   
-  // Try to get real user data first, fallback to mock with proper ObjectId
+  // Try to get authenticated user data first
+  const { data: authUser, isLoading: isLoadingAuth, error: authError } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/auth/user-data', {
+          withCredentials: true,
+        });
+        console.log('Auth user data:', response.data);
+        return response.data.user;
+      } catch (error) {
+        console.log('No authenticated user found:', error);
+        return null;
+      }
+    },
+  });
+
+  // Create current user object based on auth status
   const [currentUser] = useState(() => {
-    // In a real app, this would come from auth context
-    // For now, we'll generate a proper ObjectId format
+    // This will be updated when authUser loads
     return {
-      id: generateObjectId(),
-      name: 'User ' + Math.random().toString(36).substr(2, 5),
+      id: '', // Will be set from authUser
+      name: 'Guest User',
       photo: null,
     };
   });
+
+  // Update current user when auth data loads
+  useEffect(() => {
+    if (authUser) {
+      currentUser.id = authUser._id || authUser.id;
+      currentUser.name = authUser.name || 'User';
+      currentUser.photo = authUser.photo || null;
+      console.log('Updated current user from auth:', currentUser);
+    }
+  }, [authUser]);
 
   console.log('Current user:', currentUser);
 
@@ -104,19 +130,66 @@ const Room = () => {
 
   // Fetch current user's social connections
   const { data: currentUserData } = useQuery({
-    queryKey: ['currentUser'],
+    queryKey: ['currentUserConnections'],
     queryFn: async () => {
+      if (!authUser) return null;
       try {
         const response = await axios.get('http://localhost:3000/auth/user-data', {
           withCredentials: true,
         });
         return response.data.user;
       } catch (error) {
-        console.log('Failed to fetch user data, using mock data');
+        console.log('Failed to fetch user connections');
         return null;
       }
     },
+    enabled: !!authUser,
   });
+
+  // Show loading while auth is being checked
+  if (isLoadingAuth) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <p>Checking authentication...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show login prompt if no authenticated user
+  if (!authUser) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-bold">Authentication Required</h2>
+              <p>Please log in to join this room.</p>
+              <Button onClick={() => navigate('/auth')}>
+                Go to Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Don't try to connect to room if we don't have a valid user ID
+  if (!currentUser.id) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <p>Loading user data...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
