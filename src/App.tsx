@@ -24,7 +24,9 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Rooms />} />
+            <Route path="/rooms" element={<Rooms />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/buy-me-coffee" element={<Coffee />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
             <Route element={<ProtectedRoute />}>
@@ -33,7 +35,6 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/room/:roomId" element={<Room />} />
               <Route path="/friends" element={<Friends />} />
-              <Route path="/buy-me-coffee" element={<Coffee />} />
             </Route>
           </Routes>
           <Toaster />
