@@ -42,7 +42,7 @@ const Room = () => {
   const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } =
     useRoom(
       roomId!,
-      (userData as any)?._id || '',
+      (userData as any)?.id || '',
       userData?.name || 'Anonymous',
       roomTitle
     );
@@ -56,7 +56,7 @@ const Room = () => {
     isAudioEnabled,
     isVideoEnabled,
     isScreenSharing,
-  } = useWebRTC(roomId!, (userData as any)?._id || '');
+  } = useWebRTC(roomId!, (userData as any)?.id || '');
 
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -104,7 +104,7 @@ const Room = () => {
               users={users}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
-              localUserId={(userData as any)._id}
+              localUserId={(userData as any).id}
             />
         </div>
       </div>
@@ -117,7 +117,7 @@ const Room = () => {
           onSendMessage={handleSendMessage}
           users={users}
           ownerId={ownerId}
-          currentUserId={(userData as any)._id}
+          currentUserId={(userData as any).id}
           isOwner={isOwner}
           onKickUser={kickUser}
           onViewProfile={(userId) => console.log('View profile:', userId)}

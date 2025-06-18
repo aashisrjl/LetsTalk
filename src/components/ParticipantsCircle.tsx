@@ -1,19 +1,22 @@
-
-import { useState, useEffect } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Heart, Users } from "lucide-react";
-import axios from "axios";
+import { useState, useEffect } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Heart, Users } from 'lucide-react';
+import axios from 'axios';
 
 interface Participant {
-  _id: string;
+  id: string; // Changed from _id to id to match API
   name: string;
   photo?: string;
   likes?: number;
 }
 
+interface Room {
+  participants: { _id: string; name: string; photo?: string; rating?: number }[];
+}
+
 interface ParticipantsCircleProps {
-  rooms: any[];
+  rooms: Room[];
   onUserClick: (user: Participant) => void;
 }
 
@@ -27,17 +30,22 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
       try {
         // Get all unique participant IDs from all rooms
         const allParticipantIds = new Set<string>();
-        rooms.forEach(room => {
+        rooms.forEach((room) => {
           if (room.participants && Array.isArray(room.participants)) {
-            room.participants.forEach((id: string) => allParticipantIds.add(id));
+            room.participants.forEach((participant) => {
+              if (participant._id) {
+                allParticipantIds.add(participant._id);
+              }
+            });
           }
         });
 
         // Fetch participant details (limit to first 10 for display)
         const participantIds = Array.from(allParticipantIds).slice(0, 10);
-        const participantPromises = participantIds.map(userId =>
-          axios.get(`http://localhost:3000/users/${userId}`, { withCredentials: true })
-            .catch(err => {
+        const participantPromises = participantIds.map((userId) =>
+          axios
+            .get(`http://localhost:3000/users/${userId}`, { withCredentials: true })
+            .catch((err) => {
               console.error(`Failed to fetch user ${userId}:`, err);
               return null;
             })
@@ -45,12 +53,17 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
 
         const responses = await Promise.all(participantPromises);
         const participantsData = responses
-          .filter(res => res?.data?.success)
-          .map(res => res.data.user);
+          .filter((res) => res?.data?.success)
+          .map((res) => ({
+            id: res.data.user.id,
+            name: res.data.user.name,
+            photo: res.data.user.photo,
+            likes: res.data.user.stats?.likes || 0,
+          }));
 
         setParticipants(participantsData);
       } catch (error) {
-        console.error("Failed to fetch participants:", error);
+        console.error('Failed to fetch participants:', error);
       } finally {
         setLoading(false);
       }
@@ -64,23 +77,23 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
   // Show dummy data if no participants
   const dummyParticipants = [
     {
-      _id: "dummy1",
-      name: "Alex Chen",
-      photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      likes: 42
+      id: 'dummy1',
+      name: 'Alex Chen',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      likes: 42,
     },
     {
-      _id: "dummy2", 
-      name: "Maria Garcia",
-      photo: "https://images.unsplash.com/photo-1494790108755-2616b612b8e5?w=150&h=150&fit=crop&crop=face",
-      likes: 38
+      id: 'dummy2',
+      name: 'Maria Garcia',
+      photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b8e5?w=150&h=150&fit=crop&crop=face',
+      likes: 38,
     },
     {
-      _id: "dummy3",
-      name: "John Smith",
-      photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      likes: 29
-    }
+      id: 'dummy3',
+      name: 'John Smith',
+      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      likes: 29,
+    },
   ];
 
   const displayParticipants = participants.length > 0 ? participants : dummyParticipants;
@@ -99,14 +112,13 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
       <div className="flex items-center gap-4">
         <Users className="h-5 w-5 text-blue-500" />
         <span className="text-sm text-muted-foreground">
-          {participants.length > 0 ? "Currently active participants" : "Preview participants (demo)"}
+          {participants.length > 0 ? 'Currently active participants' : 'Preview participants'}
         </span>
       </div>
-      
       <div className="flex flex-wrap gap-4">
         {displayParticipants.map((participant) => (
           <div
-            key={participant._id}
+            key={participant.id}
             onClick={() => onUserClick(participant)}
             className="flex flex-col items-center space-y-2 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group"
           >
@@ -118,7 +130,6 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
                 </AvatarFallback>
               </Avatar>
             </div>
-            
             <div className="text-center">
               <p className="text-sm font-medium truncate max-w-[80px]" title={participant.name}>
                 {participant.name}
