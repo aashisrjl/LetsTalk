@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { Footer } from "@/components/Footer";
 import { RoomCard } from "@/components/RoomCard";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
+import { ParticipantsCircle } from "@/components/ParticipantsCircle";
+import { UserProfileModal } from "@/components/userProfileModal";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,8 @@ const Rooms = () => {
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const languages = [
@@ -87,6 +91,11 @@ const Rooms = () => {
     navigate(`/room/${roomId}`);
   };
 
+  const handleUserClick = (user: any) => {
+    setSelectedUser(user);
+    setIsUserModalOpen(true);
+  };
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="language-app-theme">
       <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -139,6 +148,12 @@ const Rooms = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Participants Circle Section */}
+                <div className="my-8">
+                  <h2 className="text-xl font-semibold mb-4">Active Participants</h2>
+                  <ParticipantsCircle rooms={filteredRooms} onUserClick={handleUserClick} />
                 </div>
 
                 {/* Room Stats */}
@@ -223,6 +238,15 @@ const Rooms = () => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
         />
+
+        {selectedUser && (
+          <UserProfileModal
+            user={selectedUser}
+            currentUserId="current-user-id" // You'll need to get this from your auth context
+            isOpen={isUserModalOpen}
+            onClose={() => setIsUserModalOpen(false)}
+          />
+        )}
 
         <Footer />
       </div>
