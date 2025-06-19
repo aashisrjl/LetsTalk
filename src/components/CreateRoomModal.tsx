@@ -1,8 +1,6 @@
-
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   Dialog,
   DialogContent,
@@ -10,22 +8,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Users, Globe, Lock, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Users, Globe, Lock, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -33,36 +31,54 @@ interface CreateRoomModalProps {
 }
 
 const languages = [
-  "English",
-  "Spanish",
-  "French",
-  "German",
-  "Italian",
-  "Portuguese",
-  "Chinese",
-  "Japanese",
-  "Korean",
-  "Arabic",
-  "Russian",
-  "Dutch",
+  'English',
+  'Spanish',
+  'French',
+  'German',
+  'Italian',
+  'Portuguese',
+  'Chinese',
+  'Japanese',
+  'Korean',
+  'Arabic',
+  'Russian',
+  'Dutch',
 ];
 
 export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const [roomData, setRoomData] = useState({
-    title: "",
-    description: "",
-    language: "",
-    maxParticipants: "10",
+    title: '',
+    description: '',
+    language: '',
+    maxParticipants: '10',
     isPrivate: false,
     tags: [] as string[],
-    level: "beginner",
-    topic: "",
+    level: 'beginner',
+    topic: '',
   });
 
-  const [newTag, setNewTag] = useState("");
+  const [newTag, setNewTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({ title: '', language: '' });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { title: '', language: '' };
+
+    if (!roomData.title.trim()) {
+      newErrors.title = 'Room title is required';
+      isValid = false;
+    }
+    if (!roomData.language) {
+      newErrors.language = 'Primary language is required';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const addTag = () => {
     if (newTag.trim() && !roomData.tags.includes(newTag.trim())) {
@@ -70,7 +86,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         ...prev,
         tags: [...prev.tags, newTag.trim()],
       }));
-      setNewTag("");
+      setNewTag('');
     }
   };
 
@@ -82,6 +98,15 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       console.log('Creating room with data:', roomData);
@@ -93,46 +118,43 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         maxParticipants: parseInt(roomData.maxParticipants),
         private: roomData.isPrivate,
         tags: roomData.tags,
-        level: roomData.level,
-        supports: ["video", "audio", "text"],
-        topic: roomData.topic || "General",
+        supports: ['video', 'audio', 'text'],
+        topic: roomData.topic || 'General',
+        level: roomData.level, // Include if schema supports it
       };
 
       console.log('Sending payload:', payload);
 
-      const response = await axios.post(
-        "http://localhost:3000/rooms",
-        payload,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await axios.post('http://localhost:3000/rooms', payload, {
+        withCredentials: true,
+      });
 
-      console.log("Room created successfully:", response.data);
-      
+      console.log('Room created successfully:', response.data);
+
       if (response.data.success && response.data.room) {
         const roomId = response.data.room.roomId;
         console.log('Navigating to room:', roomId);
-        
+
         toast({
-          title: "Room Created",
-          description: "Your room has been created successfully!",
+          title: 'Room Created',
+          description: 'Your room has been created successfully!',
         });
-        
-        onClose(); // Close the modal first
-        navigate(`/room/${roomId}`); // Then navigate
+
+        onClose();
+        navigate(`/room/${roomId}`);
       } else {
         throw new Error('Invalid response format');
       }
     } catch (error: any) {
-      console.error("Error creating room:", error);
-      
-      const errorMessage = error.response?.data?.message || error.message || "Failed to create room";
-      
+      console.error('Error creating room:', error);
+
+      const errorMessage =
+        error.response?.data?.message || error.message || 'Failed to create room';
+
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -165,7 +187,9 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               onChange={(e) =>
                 setRoomData((prev) => ({ ...prev, title: e.target.value }))
               }
+              className={errors.title ? 'border-red-500' : ''}
             />
+            {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
           </div>
 
           {/* Topic */}
@@ -189,10 +213,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               placeholder="Describe what participants can expect..."
               value={roomData.description}
               onChange={(e) =>
-                setRoomData((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
+                setRoomData((prev) => ({ ...prev, description: e.target.value }))
               }
               rows={3}
             />
@@ -207,7 +228,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 setRoomData((prev) => ({ ...prev, language: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className={errors.language ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select a language" />
               </SelectTrigger>
               <SelectContent>
@@ -218,6 +239,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 ))}
               </SelectContent>
             </Select>
+            {errors.language && <p className="text-red-500 text-xs mt-1">{errors.language}</p>}
           </div>
 
           {/* Level Select */}
@@ -269,16 +291,10 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="text-base">Private Room</Label>
-              <p className="text-sm text-muted-foreground">
-                Only invited users can join
-              </p>
+              <p className="text-sm text-muted-foreground">Only invited users can join</p>
             </div>
             <div className="flex items-center gap-2">
-              {roomData.isPrivate ? (
-                <Lock className="h-4 w-4" />
-              ) : (
-                <Globe className="h-4 w-4" />
-              )}
+              {roomData.isPrivate ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
               <Switch
                 checked={roomData.isPrivate}
                 onCheckedChange={(checked) =>
@@ -296,7 +312,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 placeholder="Add a tag..."
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addTag()}
+                onKeyDown={(e) => e.key === 'Enter' && addTag()}
               />
               <Button type="button" onClick={addTag} variant="outline">
                 Add
@@ -307,10 +323,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 {roomData.tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="gap-1">
                     {tag}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => removeTag(tag)}
-                    />
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
                   </Badge>
                 ))}
               </div>
@@ -321,8 +334,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
           <div className="bg-muted/50 rounded-lg p-4">
             <h4 className="font-medium mb-2">Available Features</h4>
             <p className="text-sm text-muted-foreground">
-              All rooms include video calls, voice chat, and text messaging.
-              Participants can toggle between modes during the session.
+              All rooms include video calls, voice chat, and text messaging. Participants can toggle between modes during the session.
             </p>
           </div>
         </div>
@@ -331,11 +343,8 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!roomData.title || !roomData.language || isLoading}
-          >
-            {isLoading ? "Creating..." : "Create Room"}
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? 'Creating...' : 'Create Room'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -4,30 +4,54 @@ const generateRoomId = require('../utils/generateRoomId'); // you’ll create th
 // Create Room
 exports.createRoom = async (req, res) => {
   try {
-    const { title, description, language, maxParticipants, private, tags, supports, topic } = req.body;
-    const createdBy = req.user.id; // assuming you're using JWT middleware to extract user
+    const { title, description, language, maxParticipants, private: isPrivate, tags, supports, topic, level } = req.body;
+    const createdBy = req.user.id;
+
+    // Validate required fields
+    if (!title || !language || !maxParticipants || !createdBy) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, language, maxParticipants, or createdBy',
+      });
+    }
+
+    // Validate supports
+    const validSupports = ['video', 'audio', 'text'];
+    if (!supports || !Array.isArray(supports) || !supports.every(s => validSupports.includes(s))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid supports field: must be an array of "video", "audio", or "text"',
+      });
+    }
 
     const roomId = generateRoomId(); // e.g., "CR947"
 
     const newRoom = new Room({
       roomId,
       title,
-      topic,
-      description,
+      description: description || '',
       language,
-      maxParticipants,
-      private,
-      tags,
+      maxParticipants: parseInt(maxParticipants),
+      private: !!isPrivate,
+      tags: tags || [],
       supports,
-      createdBy
+      topic: topic || 'General',
+      createdBy,
+      level: level || 'beginner', // Include if schema supports it
     });
 
     await newRoom.save();
 
+    console.log('Room created:', newRoom);
+
     res.status(201).json({ success: true, room: newRoom });
   } catch (err) {
-    console.error('Room creation error:', err);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error('Room creation error:', err.message, err.stack);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Server Error',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
   }
 };
 

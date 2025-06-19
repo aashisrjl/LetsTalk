@@ -1,20 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { socketManager } from '@/utils/socket';
 
-interface PeerConnection {
+interface RemoteStream {
   userId: string;
-  connection: RTCPeerConnection;
-  stream?: MediaStream;
+  stream: MediaStream;
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
 }
 
 export const useWebRTC = (roomId: string, userId: string) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
-  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [remoteStreams, setRemoteStreams] = useState<RemoteStream[]>([]);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  
+
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   const iceServers = {
     iceServers: [
@@ -30,120 +32,152 @@ export const useWebRTC = (roomId: string, userId: string) => {
         video: true,
         audio: true,
       });
-      
-      // Initially disable video and audio tracks to match the default state
-      stream.getVideoTracks().forEach(track => track.enabled = false);
-      stream.getAudioTracks().forEach(track => track.enabled = false);
-
       setLocalStream(stream);
-      
+      localStreamRef.current = stream;
       console.log('Local stream initialized:', stream);
       return stream;
     } catch (error) {
       console.error('Error accessing media devices:', error);
+      alert('Please allow microphone and camera access.');
       throw error;
     }
   }, []);
 
   // Create peer connection
-  const createPeerConnection = useCallback((targetUserId: string) => {
-    const peerConnection = new RTCPeerConnection(iceServers);
-    
-    // Add local stream tracks
-    if (localStream) {
-      localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-      });
-    }
+  const createPeerConnection = useCallback(
+    (targetUserId: string) => {
+      const peerConnection = new RTCPeerConnection(iceServers);
 
-    // Handle incoming tracks
-    peerConnection.ontrack = (event) => {
-      console.log('Received remote stream from:', targetUserId);
-      const [remoteStream] = event.streams;
-      setRemoteStreams(prev => new Map(prev.set(targetUserId, remoteStream)));
-    };
-
-    // Handle ICE candidates
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        const socket = socketManager.getSocket();
-        if (socket) {
-          socket.emit('iceCandidate', {
-            toSocketId: targetUserId,
-            candidate: event.candidate,
-          });
-        }
+      // Add local stream tracks
+      if (localStream) {
+        localStream.getTracks().forEach((track) => {
+          peerConnection.addTrack(track, localStream);
+        });
       }
-    };
 
-    peerConnections.current.set(targetUserId, peerConnection);
-    return peerConnection;
-  }, [localStream]);
+      // Handle incoming tracks
+      peerConnection.ontrack = (event) => {
+        console.log('Received remote stream from:', targetUserId);
+        const [remoteStream] = event.streams;
+        setRemoteStreams((prev) => {
+          const exists = prev.find((rs) => rs.userId === targetUserId);
+          if (exists) {
+            return prev.map((rs) =>
+              rs.userId === targetUserId
+                ? { ...rs, stream: remoteStream }
+                : rs
+            );
+          }
+          return [
+            ...prev,
+            {
+              userId: targetUserId,
+              stream: remoteStream,
+              isAudioEnabled: true,
+              isVideoEnabled: true,
+            },
+          ];
+        });
+      };
+
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          const socket = socketManager.getSocket();
+          if (socket) {
+            socket.emit('iceCandidate', {
+              toUserId: targetUserId, // Use userId, not socketId
+              candidate: event.candidate,
+              roomId,
+            });
+          }
+        }
+      };
+
+      peerConnections.current.set(targetUserId, peerConnection);
+      return peerConnection;
+    },
+    [localStream, roomId]
+  );
 
   // Create and send offer
-  const createOffer = useCallback(async (targetUserId: string) => {
-    const peerConnection = createPeerConnection(targetUserId);
-    
-    try {
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      
-      const socket = socketManager.getSocket();
-      if (socket) {
-        socket.emit('offer', {
-          toSocketId: targetUserId,
-          offer,
-        });
+  const createOffer = useCallback(
+    async (targetUserId: string) => {
+      const peerConnection = createPeerConnection(targetUserId);
+      try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        const socket = socketManager.getSocket();
+        if (socket) {
+          socket.emit('offer', {
+            toUserId: targetUserId,
+            offer,
+            roomId,
+          });
+        }
+      } catch (error) {
+        console.error('Error creating offer:', error);
       }
-    } catch (error) {
-      console.error('Error creating offer:', error);
-    }
-  }, [createPeerConnection]);
+    },
+    [createPeerConnection, roomId]
+  );
 
   // Handle incoming offer
-  const handleOffer = useCallback(async (fromSocketId: string, offer: RTCSessionDescriptionInit) => {
-    const peerConnection = createPeerConnection(fromSocketId);
-    
-    try {
-      await peerConnection.setRemoteDescription(offer);
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      
-      const socket = socketManager.getSocket();
-      if (socket) {
-        socket.emit('answer', {
-          toSocketId: fromSocketId,
-          answer,
-        });
+  const handleOffer = useCallback(
+    async (fromUserId: string, offer: RTCSessionDescriptionInit) => {
+      const peerConnection = createPeerConnection(fromUserId);
+      try {
+        await peerConnection.setRemoteDescription(
+          new RTCSessionDescription(offer)
+        );
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        const socket = socketManager.getSocket();
+        if (socket) {
+          socket.emit('answer', {
+            toUserId: fromUserId,
+            answer,
+            roomId,
+          });
+        }
+      } catch (error) {
+        console.error('Error handling offer:', error);
       }
-    } catch (error) {
-      console.error('Error handling offer:', error);
-    }
-  }, [createPeerConnection]);
+    },
+    [createPeerConnection, roomId]
+  );
 
   // Handle incoming answer
-  const handleAnswer = useCallback(async (fromSocketId: string, answer: RTCSessionDescriptionInit) => {
-    const peerConnection = peerConnections.current.get(fromSocketId);
-    if (peerConnection) {
-      try {
-        await peerConnection.setRemoteDescription(answer);
-      } catch (error) {
-        console.error('Error handling answer:', error);
+  const handleAnswer = useCallback(
+    async (fromUserId: string, answer: RTCSessionDescriptionInit) => {
+      const peerConnection = peerConnections.current.get(fromUserId);
+      if (peerConnection) {
+        try {
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer)
+          );
+        } catch (error) {
+          console.error('Error handling answer:', error);
+        }
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   // Handle ICE candidate
-  const handleIceCandidate = useCallback(async (fromSocketId: string, candidate: RTCIceCandidateInit) => {
-    const peerConnection = peerConnections.current.get(fromSocketId);
-    if (peerConnection) {
-      try {
-        await peerConnection.addIceCandidate(candidate);
-      } catch (error) {
-        console.error('Error adding ICE candidate:', error);
+  const handleIceCandidate = useCallback(
+    async (fromUserId: string, candidate: RTCIceCandidateInit) => {
+      const peerConnection = peerConnections.current.get(fromUserId);
+      if (peerConnection) {
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (error) {
+          console.error('Error adding ICE candidate:', error);
+        }
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   // Toggle video
   const toggleVideo = useCallback(() => {
@@ -154,7 +188,7 @@ export const useWebRTC = (roomId: string, userId: string) => {
         videoTrack.enabled = newState;
         setIsVideoEnabled(newState);
         const socket = socketManager.getSocket();
-        if (socket && userId) {
+        if (socket) {
           socket.emit('mediaStateChange', {
             roomId,
             userId,
@@ -175,7 +209,7 @@ export const useWebRTC = (roomId: string, userId: string) => {
         audioTrack.enabled = newState;
         setIsAudioEnabled(newState);
         const socket = socketManager.getSocket();
-        if (socket && userId) {
+        if (socket) {
           socket.emit('mediaStateChange', {
             roomId,
             userId,
@@ -194,64 +228,57 @@ export const useWebRTC = (roomId: string, userId: string) => {
         video: true,
         audio: true,
       });
-      
-      // Replace video track in all peer connections
       const videoTrack = screenStream.getVideoTracks()[0];
+      if (localStreamRef.current) {
+        const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
+        if (currentVideoTrack) {
+          currentVideoTrack.stop();
+          localStreamRef.current.removeTrack(currentVideoTrack);
+        }
+        localStreamRef.current.addTrack(videoTrack);
+        setLocalStream(new MediaStream([...localStreamRef.current.getTracks()]));
+      }
       peerConnections.current.forEach((peerConnection) => {
-        const sender = peerConnection.getSenders().find(s => 
-          s.track && s.track.kind === 'video'
-        );
+        const sender = peerConnection
+          .getSenders()
+          .find((s) => s.track && s.track.kind === 'video');
         if (sender) {
           sender.replaceTrack(videoTrack);
         }
       });
-      
       setIsScreenSharing(true);
-      
-      // Handle screen share end
       videoTrack.onended = () => {
         setIsScreenSharing(false);
-        // Switch back to camera
-        if (localStream) {
-          const cameraTrack = localStream.getVideoTracks()[0];
-          peerConnections.current.forEach((peerConnection) => {
-            const sender = peerConnection.getSenders().find(s => 
-              s.track && s.track.kind === 'video'
-            );
-            if (sender) {
-              sender.replaceTrack(cameraTrack);
-            }
-          });
-        }
+        initializeLocalStream(); // Reinitialize camera
       };
     } catch (error) {
       console.error('Error starting screen share:', error);
+      alert('Failed to start screen sharing.');
     }
-  }, [localStream]);
+  }, [initializeLocalStream]);
 
   // Setup socket listeners
   useEffect(() => {
     const socket = socketManager.getSocket();
     if (!socket) return;
 
-    // Socket event listeners
-    const handleOfferEvent = ({ fromSocketId, offer }: any) => {
-      handleOffer(fromSocketId, offer);
-    };
+    socket.emit('joinRoom', { roomId, userId });
 
-    const handleAnswerEvent = ({ fromSocketId, answer }: any) => {
-      handleAnswer(fromSocketId, answer);
+    const handleOfferEvent = ({ fromUserId, offer }: any) => {
+      handleOffer(fromUserId, offer);
     };
-
-    const handleIceCandidateEvent = ({ fromSocketId, candidate }: any) => {
-      handleIceCandidate(fromSocketId, candidate);
+    const handleAnswerEvent = ({ fromUserId, answer }: any) => {
+      handleAnswer(fromUserId, answer);
     };
-
-    const handleUserConnected = ({ userId: newUserId, socketId }: any) => {
-      console.log('User connected, creating offer for:', newUserId);
-      createOffer(socketId);
+    const handleIceCandidateEvent = ({ fromUserId, candidate }: any) => {
+      handleIceCandidate(fromUserId, candidate);
     };
-
+    const handleUserConnected = ({ userId: newUserId }: any) => {
+      if (newUserId !== userId) {
+        console.log('User connected, creating offer for:', newUserId);
+        createOffer(newUserId);
+      }
+    };
     const handleUserDisconnected = ({ userId: disconnectedUserId }: any) => {
       console.log('User disconnected:', disconnectedUserId);
       const peerConnection = peerConnections.current.get(disconnectedUserId);
@@ -259,11 +286,26 @@ export const useWebRTC = (roomId: string, userId: string) => {
         peerConnection.close();
         peerConnections.current.delete(disconnectedUserId);
       }
-      setRemoteStreams(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(disconnectedUserId);
-        return newMap;
-      });
+      setRemoteStreams((prev) =>
+        prev.filter((rs) => rs.userId !== disconnectedUserId)
+      );
+    };
+    const handleMediaStateChange = ({
+      userId: remoteUserId,
+      mediaType,
+      isEnabled,
+    }: any) => {
+      setRemoteStreams((prev) =>
+        prev.map((rs) =>
+          rs.userId === remoteUserId
+            ? {
+                ...rs,
+                [mediaType === 'audio' ? 'isAudioEnabled' : 'isVideoEnabled']:
+                  isEnabled,
+              }
+            : rs
+        )
+      );
     };
 
     socket.on('offer', handleOfferEvent);
@@ -271,6 +313,10 @@ export const useWebRTC = (roomId: string, userId: string) => {
     socket.on('iceCandidate', handleIceCandidateEvent);
     socket.on('userConnected', handleUserConnected);
     socket.on('userDisconnected', handleUserDisconnected);
+    socket.on('mediaStateChange', handleMediaStateChange);
+
+    // Initialize stream on mount
+    initializeLocalStream();
 
     return () => {
       socket.off('offer', handleOfferEvent);
@@ -278,20 +324,22 @@ export const useWebRTC = (roomId: string, userId: string) => {
       socket.off('iceCandidate', handleIceCandidateEvent);
       socket.off('userConnected', handleUserConnected);
       socket.off('userDisconnected', handleUserDisconnected);
-    };
-  }, [handleOffer, handleAnswer, handleIceCandidate, createOffer]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
+      socket.off('mediaStateChange', handleMediaStateChange);
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
-      peerConnections.current.forEach((peerConnection) => {
-        peerConnection.close();
-      });
+      peerConnections.current.forEach((pc) => pc.close());
+      peerConnections.current.clear();
     };
-  }, [localStream]);
+  }, [
+    roomId,
+    userId,
+    initializeLocalStream,
+    handleOffer,
+    handleAnswer,
+    handleIceCandidate,
+    createOffer,
+  ]);
 
   return {
     localStream,
@@ -299,7 +347,6 @@ export const useWebRTC = (roomId: string, userId: string) => {
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
-    initializeLocalStream,
     toggleVideo,
     toggleAudio,
     startScreenShare,

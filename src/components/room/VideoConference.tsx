@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { VideoGrid } from '@/components/VideoGrid';
 
@@ -10,9 +9,16 @@ interface User {
   isVideoEnabled?: boolean;
 }
 
+interface RemoteStream {
+  userId: string;
+  stream: MediaStream;
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
+}
+
 interface VideoConferenceProps {
   localStream: MediaStream | null;
-  remoteStreams: Map<string, MediaStream>;
+  remoteStreams: RemoteStream[];
   users: User[];
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
