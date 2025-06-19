@@ -133,3 +133,27 @@ exports.countAllRooms = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+exports.updateRoomParticipants = async (roomId, userId, action) => {
+  try {
+    const room = await Room.findOne({ roomId });
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    if (action === 'join') {
+      if (!room.participants.some(p => p.userId === userId)) {
+        room.participants.push({ userId, userName: 'Unknown' });
+      }
+    } else if (action === 'leave') {
+      room.participants = room.participants.filter(p => p.userId !== userId);
+    }
+
+    room.isLive = room.participants.length > 0;
+    await room.save();
+    console.log(`Updated participants for room ${roomId}:`, room.participants);
+    return room;
+  } catch (err) {
+    console.error('Error updating room participants:', err.message, err.stack);
+    throw err;
+  }
+};

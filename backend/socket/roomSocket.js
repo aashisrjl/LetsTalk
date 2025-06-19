@@ -1,11 +1,12 @@
+const mongoose = require('mongoose');
 const Room = require('../database/models/room.model');
 const User = require('../database/models/user.model');
 
 module.exports = (io) => {
   const roomState = {
-    users: {},
-    owners: {},
-    sessionTimes: {},
+    users: {}, // { roomId: [{ socketId, userId, userName, joinTime, isAudioEnabled, isVideoEnabled, photo }] }
+    owners: {}, // { roomId: ownerUserId }
+    sessionTimes: {}, // { socketId: startTime }
   };
 
   const addUserToRoom = async (roomId, userData) => {
@@ -16,11 +17,20 @@ module.exports = (io) => {
     const existingUser = roomState.users[roomId].find((u) => u.userId === userData.userId);
     if (!existingUser) {
       roomState.users[roomId].push(userData);
-      await Room.findOneAndUpdate(
-        { roomId },
-        { $addToSet: { participants: { userId: userData.userId, userName: userData.userName } } },
-        { upsert: false } // Prevent creating new rooms here
-      );
+      try {
+        await Room.findOneAndUpdate(
+          { roomId },
+          {
+            $addToSet: {
+              participants: new mongoose.Types.ObjectId(userData.userId),
+            },
+          },
+          { new: true }
+        );
+      } catch (error) {
+        console.error(`❌ Error adding user ${userData.userId} to room ${roomId}:`, error);
+        throw error;
+      }
     }
 
     return roomState.users[roomId];
@@ -38,7 +48,7 @@ module.exports = (io) => {
     try {
       const room = await Room.findOne({ roomId });
       if (room) {
-        room.participants = room.participants.filter(p => p.userId !== userId);
+        room.participants = room.participants.filter(p => p.toString() !== userId);
         room.isLive = room.participants.length > 0;
         await room.save();
         console.log(`✅ Updated participants for room ${roomId}:`, room.participants);
@@ -84,8 +94,7 @@ module.exports = (io) => {
 
     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
       try {
-        // Verify room exists
-        const room = await Room.findOne({ roomId });
+        const room = await Room.findOne({ roomId }).populate('participants', 'name photo');
         if (!room) {
           socket.emit('error', { message: 'Room not found' });
           return;
@@ -98,7 +107,10 @@ module.exports = (io) => {
 
         if (!roomState.owners[roomId]) {
           roomState.owners[roomId] = userId;
-          await Room.findOneAndUpdate({ roomId }, { createdBy: userId });
+          await Room.findOneAndUpdate(
+            { roomId },
+            { createdBy: new mongoose.Types.ObjectId(userId) }
+          );
         }
 
         const user = await User.findById(userId).select('name photo stats');
@@ -142,8 +154,8 @@ module.exports = (io) => {
 
         console.log(`👤 User ${user.name} joined room ${roomId}`);
       } catch (error) {
-        console.error('❌ Error in joinRoom:', error);
-        socket.emit('error', { message: 'Failed to join room: ' + error.message });
+        console.error('❌ Error in joinRoom:', error.message, error.stack);
+        socket.emit('error', { message: `Failed to join room: ${error.message}` });
       }
     });
 
@@ -181,7 +193,7 @@ module.exports = (io) => {
         socket.leave(roomId);
       } catch (error) {
         console.error('❌ Error in leaveRoom:', error);
-        socket.emit('error', { message: 'Failed to leave room: ' + error.message });
+        socket.emit('error', { message: `Failed to leave room: ${error.message}` });
       }
     });
 
@@ -238,7 +250,7 @@ module.exports = (io) => {
         console.log(`🚫 User ${userId} kicked from room ${roomId} by owner ${ownerId}`);
       } catch (error) {
         console.error('❌ Error in kickUser:', error);
-        socket.emit('error', { message: 'Failed to kick user: ' + error.message });
+        socket.emit('error', { message: `Failed to kick user: ${error.message}` });
       }
     });
 
