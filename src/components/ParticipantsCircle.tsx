@@ -78,21 +78,63 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
   const dummyParticipants = [
     {
       id: 'dummy1',
-      name: 'Alex Chen',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      likes: 42,
+      name: '',
+      photo: '',
+      likes: 0,
     },
     {
       id: 'dummy2',
-      name: 'Maria Garcia',
-      photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b8e5?w=150&h=150&fit=crop&crop=face',
-      likes: 38,
+      name: '',
+      photo: '',
+      likes: 0,
     },
     {
       id: 'dummy3',
-      name: 'John Smith',
-      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      likes: 29,
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy4',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy5',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy1',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy2',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy3',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy4',
+      name: '',
+      photo: '',
+      likes: 0,
+    },
+    {
+      id: 'dummy5',
+      name: '',
+      photo: '',
+      likes: 0,
     },
   ];
 
@@ -108,14 +150,15 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
+    //scroll horizontally
+    <div className="space-y-4 *:overflow-x-auto "> 
+      <div className="flex items-center gap-4 ">
         <Users className="h-5 w-5 text-blue-500" />
         <span className="text-sm text-muted-foreground">
           {participants.length > 0 ? 'Currently active participants' : 'Preview participants'}
         </span>
       </div>
-      <div className="flex flex-wrap gap-4">
+      <div  className="flex flex-wrap gap-4">
         {displayParticipants.map((participant) => (
           <div
             key={participant.id}

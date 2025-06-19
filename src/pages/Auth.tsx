@@ -43,7 +43,7 @@ const Auth = () => {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                  Welcome to FreeTalk
+                  Welcome to LetsTalk
                 </h1>
                 <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-2">
                   Connect with language learners worldwide
@@ -112,7 +112,7 @@ const Auth = () => {
                 Terms of Service
               </a>{" "}
               and{" "}
-              <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300">
+              <a href="http://localhost:3000/privacy-policy" className="underline hover:text-gray-700 dark:hover:text-gray-300">
                 Privacy Policy
               </a>
             </p>
