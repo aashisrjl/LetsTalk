@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoom } from '@/hooks/useRoom';
@@ -16,51 +17,46 @@ interface User {
   photo?: string;
 }
 
+const fetchRoomData = async (roomId: string) => {
+  const response = await axios.get(`http://localhost:3000/rooms/${roomId}`, {
+    withCredentials: true,
+  });
+  if (!response.data.success || !response.data.room) {
+    throw new Error(response.data.message || 'Failed to fetch room data');
+  }
+  return response.data.room;
+};
+
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user: userData, isLoading, isAuthenticated } = useAuth();
-  const [roomTitle, setRoomTitle] = useState('Language Room');
-  const [roomData, setRoomData] = useState<any>(null);
   const [messageInput, setMessageInput] = useState('');
 
-  console.log('Room.tsx - roomId:', roomId, 'userData:', userData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+  // Memoize userData to prevent reference changes
+  const stableUserData = useMemo(
+    () => userData ? { id: userData.id, name: userData.name, photo: userData.photo } : null,
+    [userData?.id, userData?.name, userData?.photo]
+  );
 
-  useEffect(() => {
-    const fetchRoomData = async () => {
-      try {
-        const response = await axios.get(`http://localhost:3000/rooms/${roomId}`, {
-          withCredentials: true,
-        });
-        console.log('Room data fetched:', response.data);
-        if (response.data.success && response.data.room) {
-          setRoomTitle(response.data.room.title);
-          setRoomData(response.data.room);
-        } else {
-          console.error('Failed to fetch room data:', response.data.message);
-          navigate('/rooms');
-        }
-      } catch (error) {
-        console.error('Error fetching room data:', error);
-        navigate('/rooms');
-      }
-    };
+  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
-    if (roomId && userData?.id) {
-      fetchRoomData();
-    }
-  }, [roomId, userData, navigate]);
+  const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
+    queryKey: ['room', roomId],
+    queryFn: () => fetchRoomData(roomId!),
+    enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
+  });
 
-  if (isLoading) {
+  if (isLoading || isRoomLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading user data...
+        Loading...
       </div>
     );
   }
 
-  if (!userData || !userData.id || !userData.name || !isAuthenticated) {
-    console.warn('Redirecting to login: Invalid userData or not authenticated', userData);
+  if (!stableUserData || !stableUserData.id || !stableUserData.name || !isAuthenticated) {
+    console.warn('Redirecting to login: Invalid userData or not authenticated', stableUserData);
     return <Navigate to="/login" replace />;
   }
 
@@ -69,10 +65,26 @@ const Room = () => {
     return <Navigate to="/rooms" replace />;
   }
 
+  if (roomError) {
+    console.error('Room fetch error:', roomError.message);
+    navigate('/rooms');
+    return null;
+  }
+
+  if (!roomData) {
+    return (
+      <div className="flex items-center justify-center h-screen text-slate-100">
+        Loading room data...
+      </div>
+    );
+  }
+
+  const roomTitle = roomData.title || 'Language Room';
+
   const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
     roomId,
-    userData.id,
-    userData.name,
+    stableUserData.id,
+    stableUserData.name,
     roomTitle
   );
 
@@ -85,7 +97,8 @@ const Room = () => {
     isAudioEnabled,
     isVideoEnabled,
     isScreenSharing,
-  } = useWebRTC(roomId, userData.id);
+    streamError,
+  } = useWebRTC(roomId, stableUserData.id, isConnected);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,14 +112,6 @@ const Room = () => {
     navigate('/rooms');
   };
 
-  if (!roomData) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading room data...
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 font-sans">
       <Toaster />
@@ -117,6 +122,7 @@ const Room = () => {
             isVideoEnabled={isVideoEnabled}
             isScreenSharing={isScreenSharing}
             localStream={localStream}
+            
             onToggleAudio={toggleAudio}
             onToggleVideo={toggleVideo}
             onScreenShare={startScreenShare}
@@ -130,7 +136,7 @@ const Room = () => {
             users={users}
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
-            localUserId={userData.id}
+            localUserId={stableUserData.id}
           />
         </div>
       </div>
@@ -142,7 +148,7 @@ const Room = () => {
           onSendMessage={handleSendMessage}
           users={users}
           ownerId={ownerId}
-          currentUserId={userData.id}
+          currentUserId={stableUserData.id}
           isOwner={isOwner}
           onKickUser={kickUser}
           onViewProfile={(userId) => console.log('View profile:', userId)}

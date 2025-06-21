@@ -14,17 +14,18 @@ module.exports = (io) => {
       roomState.users[roomId] = [];
     }
 
-    const existingUser = roomState.users[roomId].find((u) => u.userId === userData.userId);
-    if (!existingUser) {
+    // Update or add user
+    const existingUserIndex = roomState.users[roomId].findIndex((u) => u.userId === userData.userId);
+    if (existingUserIndex !== -1) {
+      // Update socketId for existing user
+      roomState.users[roomId][existingUserIndex] = { ...roomState.users[roomId][existingUserIndex], socketId: userData.socketId };
+      console.log(`🔄 Updated socketId for user ${userData.userId} in room ${roomId}`);
+    } else {
       roomState.users[roomId].push(userData);
       try {
         await Room.findOneAndUpdate(
           { roomId },
-          {
-            $addToSet: {
-              participants: new mongoose.Types.ObjectId(userData.userId),
-            },
-          },
+          { $addToSet: { participants: new mongoose.Types.ObjectId(userData.userId) } },
           { new: true }
         );
       } catch (error) {
@@ -48,7 +49,7 @@ module.exports = (io) => {
     try {
       const room = await Room.findOne({ roomId });
       if (room) {
-        room.participants = room.participants.filter(p => p.toString() !== userId);
+        room.participants = room.participants.filter((p) => p.toString() !== userId);
         room.isLive = room.participants.length > 0;
         await room.save();
         console.log(`✅ Updated participants for room ${roomId}:`, room.participants);
@@ -98,6 +99,16 @@ module.exports = (io) => {
         if (!room) {
           socket.emit('error', { message: 'Room not found' });
           return;
+        }
+
+        // Leave previous room if in one
+        if (socket.roomId && socket.roomId !== roomId) {
+          await removeUserFromRoom(socket.roomId, socket.userId);
+          socket.leave(socket.roomId);
+          emitRoomUpdate(socket.roomId);
+          io.to(socket.roomId).emit('userLeft', { userId: socket.userId, socketId: socket.id });
+          io.to(socket.roomId).emit('userDisconnected', { userId: socket.userId });
+          console.log(`👋 User ${socket.userId} left previous room ${socket.roomId}`);
         }
 
         socket.join(roomId);
@@ -159,16 +170,31 @@ module.exports = (io) => {
       }
     });
 
-    socket.on('offer', ({ toSocketId, offer }) => {
-      socket.to(toSocketId).emit('offer', { fromSocketId: socket.id, offer });
+    socket.on('offer', ({ toUserId, offer, roomId }) => {
+      const targetUser = roomState.users[roomId]?.find((u) => u.userId === toUserId);
+      if (targetUser) {
+        io.to(targetUser.socketId).emit('offer', { fromUserId: socket.userId, offer });
+      } else {
+        socket.emit('error', { message: `User ${toUserId} not found in room ${roomId}` });
+      }
     });
 
-    socket.on('answer', ({ toSocketId, answer }) => {
-      socket.to(toSocketId).emit('answer', { fromSocketId: socket.id, answer });
+    socket.on('answer', ({ toUserId, answer, roomId }) => {
+      const targetUser = roomState.users[roomId]?.find((u) => u.userId === toUserId);
+      if (targetUser) {
+        io.to(targetUser.socketId).emit('answer', { fromUserId: socket.userId, answer });
+      } else {
+        socket.emit('error', { message: `User ${toUserId} not found in room ${roomId}` });
+      }
     });
 
-    socket.on('iceCandidate', ({ toSocketId, candidate }) => {
-      socket.to(toSocketId).emit('iceCandidate', { fromSocketId: socket.id, candidate });
+    socket.on('iceCandidate', ({ toUserId, candidate, roomId }) => {
+      const targetUser = roomState.users[roomId]?.find((u) => u.userId === toUserId);
+      if (targetUser) {
+        io.to(targetUser.socketId).emit('iceCandidate', { fromUserId: socket.userId, candidate });
+      } else {
+        socket.emit('error', { message: `User ${toUserId} not found in room ${roomId}` });
+      }
     });
 
     socket.on('leaveRoom', async ({ roomId, userId }) => {
@@ -191,6 +217,9 @@ module.exports = (io) => {
 
         delete roomState.sessionTimes[socket.id];
         socket.leave(roomId);
+        socket.roomId = null;
+        socket.userId = null;
+        socket.userName = null;
       } catch (error) {
         console.error('❌ Error in leaveRoom:', error);
         socket.emit('error', { message: `Failed to leave room: ${error.message}` });
@@ -218,6 +247,7 @@ module.exports = (io) => {
           } else if (mediaType === 'video') {
             userInRoom.isVideoEnabled = isEnabled;
           }
+          io.to(roomId).emit('mediaStateChange', { userId, mediaType, isEnabled });
           emitRoomUpdate(roomId);
           console.log(`🎤 Media state changed for ${userInRoom.userName} in room ${roomId}: ${mediaType} is ${isEnabled ? 'ON' : 'OFF'}`);
         }
@@ -278,6 +308,9 @@ module.exports = (io) => {
 
         delete roomState.sessionTimes[socket.id];
         socket.leave(roomId);
+        socket.roomId = null;
+        socket.userId = null;
+        socket.userName = null;
       } catch (error) {
         console.error('❌ Error during disconnect cleanup:', error);
       }

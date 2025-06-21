@@ -3,157 +3,194 @@ import { io, Socket } from 'socket.io-client';
 class SocketManager {
   private socket: Socket | null = null;
   private roomId: string | null = null;
+  private isConnecting: boolean = false;
 
   connect() {
-    if (!this.socket || !this.socket.connected) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-      console.log(`Initializing socket connection to ${backendUrl}`);
-      this.socket = io(backendUrl, {
-        withCredentials: true,
-        autoConnect: true,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-      });
-
-      this.socket.on('connect', () => {
-        console.log('SocketManager: Connected to server, socket ID:', this.socket?.id);
-      });
-
-      this.socket.on('connect_error', (err) => {
-        console.error('SocketManager: Connection error:', err.message);
-      });
-
-      this.socket.on('error', (err) => {
-        console.error('SocketManager: Server error:', err);
-      });
+    if (this.isConnecting) {
+      console.log('SocketManager: Connection in progress, returning existing socket');
+      return this.socket;
     }
+    if (this.socket && this.socket.connected) {
+      console.log('SocketManager: Already connected, socket ID:', this.socket.id);
+      return this.socket;
+    }
+    this.isConnecting = true;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    console.log(`SocketManager: Initializing socket connection to ${backendUrl}`);
+    this.socket = io(backendUrl, {
+      withCredentials: true,
+      autoConnect: true,
+      reconnection: false, // Disable reconnection to prevent duplicates
+    });
+
+    this.socket.on('connect', () => {
+      this.isConnecting = false;
+      console.log('SocketManager: Connected to server, socket ID:', this.socket?.id);
+    });
+
+    this.socket.on('connect_error', (err) => {
+      this.isConnecting = false;
+      console.error('SocketManager: Connection error:', err.message);
+    });
+
+    this.socket.on('error', (err) => {
+      console.error('SocketManager: Server error:', err);
+    });
+
     return this.socket;
   }
 
   disconnect() {
     if (this.socket) {
-      console.log('Disconnecting socket');
+      console.log('SocketManager: Disconnecting socket, ID:', this.socket.id);
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
       this.roomId = null;
+      this.isConnecting = false;
     }
   }
 
   joinRoom(roomId: string, userId: string, userName: string, roomTitle: string) {
     if (this.socket && this.socket.connected) {
+      if (this.roomId && this.roomId !== roomId) {
+        console.log(`SocketManager: Leaving previous room ${this.roomId} before joining ${roomId}`);
+        this.leaveRoom(this.roomId, userId);
+      }
       this.roomId = roomId;
-      console.log('Joining room:', { roomId, userId, userName, roomTitle });
+      console.log('SocketManager: Joining room:', { roomId, userId, userName, roomTitle });
       this.socket.emit('joinRoom', { roomId, userId, userName, roomTitle });
     } else {
-      console.error('Cannot join room: Socket not connected');
+      console.error('SocketManager: Cannot join room: Socket not connected');
     }
   }
 
   leaveRoom(roomId: string, userId: string) {
-    if (this.socket && this.socket.connected) {
-      console.log('Leaving room:', { roomId, userId });
+    if (this.socket && this.socket.connected && this.roomId === roomId) {
+      console.log('SocketManager: Leaving room:', { roomId, userId });
       this.socket.emit('leaveRoom', { roomId, userId });
       this.roomId = null;
     } else {
-      console.error('Cannot leave room: Socket not connected');
+      console.error('SocketManager: Cannot leave room: Socket not connected or wrong roomId');
     }
   }
 
   sendMessage(message: string, userName: string) {
     if (this.socket && this.socket.connected && this.roomId) {
-      console.log('Sending message:', { message, userName });
+      console.log('SocketManager: Sending message:', { message, userName });
       this.socket.emit('sendMessage', {
         message,
         userName,
         time: new Date().toISOString(),
       });
     } else {
-      console.error('Cannot send message: Socket not connected or no room joined');
+      console.error('SocketManager: Cannot send message: Socket not connected or no room joined');
     }
   }
 
   kickUser(roomId: string, userId: string) {
-    if (this.socket && this.socket.connected) {
-      console.log('Kicking user:', { roomId, userId });
+    if (this.socket && this.socket.connected && this.roomId === roomId) {
+      console.log('SocketManager: Kicking user:', { roomId, userId });
       this.socket.emit('kickUser', { roomId, userId });
     } else {
-      console.error('Cannot kick user: Socket not connected');
+      console.error('SocketManager: Cannot kick user: Socket not connected or wrong roomId');
     }
   }
 
+  // Listener methods with cleanup
   onRoomUsers(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('roomUsers', (data) => {
-        console.log('Received roomUsers:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received roomUsers:', data);
         callback(data);
-      });
+      };
+      this.socket.on('roomUsers', handler);
+      return () => this.socket?.off('roomUsers', handler);
     }
+    return () => {};
   }
 
   onUserJoined(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('userJoined', (data) => {
-        console.log('Received userJoined:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received userJoined:', data);
         callback(data);
-      });
+      };
+      this.socket.on('userJoined', handler);
+      return () => this.socket?.off('userJoined', handler);
     }
+    return () => {};
   }
 
   onUserLeft(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('userLeft', (data) => {
-        console.log('Received userLeft:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received userLeft:', data);
         callback(data);
-      });
+      };
+      this.socket.on('userLeft', handler);
+      return () => this.socket?.off('userLeft', handler);
     }
+    return () => {};
   }
 
   onReceiveMessage(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('receiveMessage', (data) => {
-        console.log('Received receiveMessage:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received receiveMessage:', data);
         callback(data);
-      });
+      };
+      this.socket.on('receiveMessage', handler);
+      return () => this.socket?.off('receiveMessage', handler);
     }
+    return () => {};
   }
 
   onOwnershipTransferred(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('ownershipTransferred', (data) => {
-        console.log('Received ownershipTransferred:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received ownershipTransferred:', data);
         callback(data);
-      });
+      };
+      this.socket.on('ownershipTransferred', handler);
+      return () => this.socket?.off('ownershipTransferred', handler);
     }
+    return () => {};
   }
 
   onKicked(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('kicked', (data) => {
-        console.log('Received kicked:', data);
+      const handler = (data: any) => {
+        console.log('SocketManager: Received kicked:', data);
         callback(data);
-      });
+      };
+      this.socket.on('kicked', handler);
+      return () => this.socket?.off('kicked', handler);
     }
+    return () => {};
   }
 
   onError(callback: (data: any) => void) {
     if (this.socket) {
-      this.socket.on('error', (data) => {
-        console.error('Received error:', data);
+      const handler = (data: any) => {
+        console.error('SocketManager: Received error:', data);
         callback(data);
-      });
+      };
+      this.socket.on('error', handler);
+      return () => this.socket?.off('error', handler);
     }
+    return () => {};
   }
 
   removeAllListeners() {
     if (this.socket) {
-      console.log('Removing all socket listeners');
+      console.log('SocketManager: Removing all socket listeners');
       this.socket.removeAllListeners();
     }
   }
 
   getSocket() {
-    console.log('Getting socket:', this.socket?.connected ? 'Connected' : 'Not connected');
+    console.log('SocketManager: Getting socket:', this.socket?.connected ? 'Connected' : 'Not connected');
     return this.socket;
   }
 }

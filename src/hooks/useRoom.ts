@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { socketManager } from '@/utils/socket';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -27,36 +27,45 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isInitialized = useRef(false);
+  const cleanupListeners = useRef<(() => void)[]>([]);
 
   console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
 
   const connectToRoom = useCallback(() => {
-    console.log('Attempting to connect to room...');
+    if (isInitialized.current) {
+      console.log('useRoom: Already initialized, skipping connection');
+      return;
+    }
+    isInitialized.current = true;
+    console.log('useRoom: Connecting to room...');
     const socket = socketManager.connect();
 
     const connectionTimeout = setTimeout(() => {
       if (!socket.connected) {
-        console.warn('⏰ Connection timeout');
+        console.warn('useRoom: ⏰ Connection timeout');
         toast({
           title: 'Connection Timeout',
           description: 'Failed to connect to the room. Please check your network or try again.',
           variant: 'destructive',
         });
         setIsConnected(false);
+        isInitialized.current = false;
       }
     }, 10000);
 
     socket.on('connect', () => {
       clearTimeout(connectionTimeout);
-      console.log('✅ Connected to server, socket ID:', socket.id);
+      console.log('useRoom: ✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
-      console.log('Joining room with data:', { roomId, userId, userName, roomTitle });
+      console.log('useRoom: Joining room with data:', { roomId, userId, userName, roomTitle });
       socketManager.joinRoom(roomId, userId, userName, roomTitle);
     });
 
     socket.on('disconnect', () => {
-      console.log('❌ Disconnected from server');
+      console.log('useRoom: ❌ Disconnected from server');
       setIsConnected(false);
+      isInitialized.current = false;
       toast({
         title: 'Disconnected',
         description: 'Lost connection to the room server.',
@@ -65,8 +74,9 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Connection error:', error.message);
+      console.error('useRoom: ❌ Connection error:', error.message);
       setIsConnected(false);
+      isInitialized.current = false;
       toast({
         title: 'Connection Error',
         description: `Failed to connect to the room server: ${error.message}`,
@@ -74,74 +84,81 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       });
     });
 
-    socketManager.onRoomUsers((data) => {
-      console.log('📋 Room users updated:', data);
+    cleanupListeners.current.push(socketManager.onRoomUsers((data) => {
+      console.log('useRoom: 📋 Room users updated:', data);
       setUsers(data.users || []);
       setOwnerId(data.ownerId || '');
-    });
+    }));
 
-    socketManager.onUserJoined((data) => {
-      console.log('👤 User joined:', data);
+    cleanupListeners.current.push(socketManager.onUserJoined((data) => {
+      console.log('useRoom: 👤 User joined:', data);
       toast({
         title: 'User Joined',
         description: `${data.userName} joined the room`,
       });
-    });
+    }));
 
-    socketManager.onUserLeft((data) => {
-      console.log('👋 User left:', data);
+    cleanupListeners.current.push(socketManager.onUserLeft((data) => {
+      console.log('useRoom: 👋 User left:', data);
       toast({
         title: 'User Left',
         description: `User left the room`,
       });
-    });
+    }));
 
-    socketManager.onReceiveMessage((data) => {
-      console.log('💬 Message received:', data);
+    cleanupListeners.current.push(socketManager.onReceiveMessage((data) => {
+      console.log('useRoom: 💬 Message received:', data);
       setMessages((prev) => [...prev, data]);
-    });
+    }));
 
-    socketManager.onOwnershipTransferred((data) => {
-      console.log('👑 Ownership transferred:', data);
+    cleanupListeners.current.push(socketManager.onOwnershipTransferred((data) => {
+      console.log('useRoom: 👑 Ownership transferred:', data);
       setOwnerId(data.newOwnerId);
       toast({
         title: 'Ownership Transferred',
         description: 'Room ownership has been transferred',
       });
-    });
+    }));
 
-    socketManager.onKicked((data) => {
-      console.log('🚫 Kicked from room:', data);
+    cleanupListeners.current.push(socketManager.onKicked((data) => {
+      console.log('useRoom: 🚫 Kicked from room:', data);
       toast({
         title: 'Kicked from Room',
         description: data.reason || 'You have been kicked from the room',
         variant: 'destructive',
       });
       navigate('/rooms');
-    });
+    }));
 
-    socketManager.onError((data) => {
-      console.error('❌ Socket error:', data);
+    cleanupListeners.current.push(socketManager.onError((data) => {
+      console.error('useRoom: ❌ Socket error:', data);
       toast({
         title: 'Error',
         description: data.message || 'An error occurred',
         variant: 'destructive',
       });
-    });
+    }));
   }, [roomId, userId, userName, roomTitle, toast, navigate]);
 
   const disconnectFromRoom = useCallback(() => {
-    console.log('Disconnecting from room...');
+    if (!isInitialized.current) {
+      console.log('useRoom: Not initialized, skipping disconnect');
+      return;
+    }
+    console.log('useRoom: Disconnecting from room...');
+    cleanupListeners.current.forEach((cleanup) => cleanup());
+    cleanupListeners.current = [];
     socketManager.leaveRoom(roomId, userId);
     socketManager.disconnect();
     setIsConnected(false);
+    isInitialized.current = false;
   }, [roomId, userId]);
 
   const sendMessage = useCallback(
     (message: string) => {
-      console.log('Sending message:', message);
+      console.log('useRoom: Sending message:', message);
       if (!isConnected) {
-        console.warn('Cannot send message: not connected');
+        console.warn('useRoom: Cannot send message: not connected');
         toast({
           title: 'Cannot Send Message',
           description: 'Not connected to the room',
@@ -156,7 +173,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
 
   const kickUser = useCallback(
     (targetUserId: string) => {
-      console.log('Kicking user:', targetUserId);
+      console.log('useRoom: Kicking user:', targetUserId);
       socketManager.kickUser(roomId, targetUserId);
     },
     [roomId]
@@ -164,7 +181,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
 
   useEffect(() => {
     if (!roomId || !userId || !userName) {
-      console.warn('Missing required parameters for room connection:', { roomId, userId, userName });
+      console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
       toast({
         title: 'Invalid Parameters',
         description: 'Room ID, user ID, or username is missing',
@@ -174,11 +191,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       return;
     }
 
-    console.log('Setting up room connection...');
     connectToRoom();
 
     return () => {
-      console.log('Cleaning up room connection...');
+      console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
   }, [connectToRoom, disconnectFromRoom, roomId, userId, userName, toast, navigate]);
