@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +10,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { VideoGrid } from '@/components/VideoGrid';
 import { SidePanel } from '@/components/room/SidePanel';
 import { MediaControls } from '@/components/room/MediaControls';
+import { Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface User {
   id: string;
@@ -31,22 +34,47 @@ const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user: userData, isLoading, isAuthenticated } = useAuth();
-  const [messageInput, setMessageInput] = useState('');
 
-  // Memoize userData to prevent reference changes
+  // State for SidePanel toggle on small screens
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+
   const stableUserData = useMemo(
-    () => userData ? { id: userData.id, name: userData.name, photo: userData.photo } : null,
+    () => (userData ? { id: userData.id, name: userData.name, photo: userData.photo } : null),
     [userData?.id, userData?.name, userData?.photo]
   );
 
-  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
-
+  const [messageInput, setMessageInput] = useState('');
   const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
     queryFn: () => fetchRoomData(roomId!),
     enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
   });
 
+  const roomTitle = roomData?.title || 'Language Room';
+
+  // Hooks at the top to maintain rules of hooks
+  const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
+    roomId || '',
+    stableUserData?.id || '',
+    stableUserData?.name || '',
+    roomTitle
+  );
+
+  const {
+    localStream,
+    remoteStreams,
+    toggleAudio,
+    toggleVideo,
+    startScreenShare,
+    isAudioEnabled,
+    isVideoEnabled,
+    isScreenSharing,
+    streamError,
+  } = useWebRTC(roomId || '', stableUserData?.id || '', isConnected);
+
+  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', roomTitle);
+
+  // Loading and error states after hooks
   if (isLoading || isRoomLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-slate-100">
@@ -71,35 +99,6 @@ const Room = () => {
     return null;
   }
 
-  if (!roomData) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading room data...
-      </div>
-    );
-  }
-
-  const roomTitle = roomData.title || 'Language Room';
-
-  const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
-    roomId,
-    stableUserData.id,
-    stableUserData.name,
-    roomTitle
-  );
-
-  const {
-    localStream,
-    remoteStreams,
-    toggleAudio,
-    toggleVideo,
-    startScreenShare,
-    isAudioEnabled,
-    isVideoEnabled,
-    isScreenSharing,
-    streamError,
-  } = useWebRTC(roomId, stableUserData.id, isConnected);
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim()) {
@@ -112,24 +111,43 @@ const Room = () => {
     navigate('/rooms');
   };
 
+  const toggleSidePanel = () => {
+    setIsSidePanelOpen(!isSidePanelOpen);
+  };
+
   return (
-    <div className="flex h-screen bg-slate-900 text-slate-100 font-sans">
+    <div className="flex h-screen bg-slate-900 text-slate-100 font-sans relative overflow-hidden">
       <Toaster />
-      <div className="flex-1 flex flex-col relative overflow-hidden">
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Hamburger menu for small screens */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden absolute top-4 right-4 z-30 text-slate-100"
+          onClick={toggleSidePanel}
+          aria-label={isSidePanelOpen ? 'Close side panel' : 'Open side panel'}
+        >
+          {isSidePanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </Button>
+
+        {/* Media controls */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row gap-2">
           <MediaControls
             isAudioEnabled={isAudioEnabled}
             isVideoEnabled={isVideoEnabled}
             isScreenSharing={isScreenSharing}
             localStream={localStream}
-            
+            streamError={streamError}
             onToggleAudio={toggleAudio}
             onToggleVideo={toggleVideo}
             onScreenShare={startScreenShare}
             onLeaveRoom={handleLeaveRoom}
           />
         </div>
-        <div className="flex-1 flex items-center justify-center">
+
+        {/* Video grid */}
+        <div className="flex-1 flex items-center justify-center w-full h-full">
           <VideoGrid
             localStream={localStream}
             remoteStreams={remoteStreams}
@@ -140,7 +158,13 @@ const Room = () => {
           />
         </div>
       </div>
-      <div className="w-[350px] bg-slate-800/50 border-l border-slate-700 h-full flex flex-col">
+
+      {/* SidePanel for large screens, hidden by default on small screens */}
+      <div
+        className={`fixed md:static inset-y-0 right-0 w-[300px] sm:w-[350px] bg-slate-800/50 border-l border-slate-700 transform transition-transform duration-300 ease-in-out z-40
+          ${isSidePanelOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+        `}
+      >
         <SidePanel
           messages={messages}
           messageInput={messageInput}
@@ -156,6 +180,15 @@ const Room = () => {
           roomData={roomData}
         />
       </div>
+
+      {/* Backdrop for small screens when SidePanel is open */}
+      {isSidePanelOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={toggleSidePanel}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 };

@@ -50,7 +50,7 @@ const Rooms = () => {
         const response = await axios.get("http://localhost:3000/rooms", {
           withCredentials: true,
         });
-        console.log('Fetched rooms:', response.data);
+        console.log("Fetched rooms:", response.data);
         if (response.data.success) {
           setRooms(response.data.rooms || []);
         } else {
@@ -87,7 +87,7 @@ const Rooms = () => {
   });
 
   const handleJoinRoom = (roomId: string) => {
-    console.log('Navigating to room:', roomId);
+    console.log("Navigating to room:", roomId);
     navigate(`/room/${roomId}`);
   };
 
@@ -152,8 +152,14 @@ const Rooms = () => {
 
                 {/* Participants Circle Section */}
                 <div className="my-8">
-                  <h2 className="text-xl font-semibold mb-4">Active Participants</h2>
-                  <ParticipantsCircle rooms={filteredRooms} onUserClick={handleUserClick} />
+                  <h2 className="text-xl font-semibold mb-4">
+                    Active Participants
+                  </h2>
+                 
+                    <ParticipantsCircle
+                      rooms={filteredRooms}
+                      onUserClick={handleUserClick}
+                    />
                 </div>
 
                 {/* Room Stats */}

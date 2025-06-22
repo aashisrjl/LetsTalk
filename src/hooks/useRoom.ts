@@ -58,8 +58,6 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       clearTimeout(connectionTimeout);
       console.log('useRoom: ✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
-      console.log('useRoom: Joining room with data:', { roomId, userId, userName, roomTitle });
-      socketManager.joinRoom(roomId, userId, userName, roomTitle);
     });
 
     socket.on('disconnect', () => {
@@ -138,7 +136,16 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         variant: 'destructive',
       });
     }));
-  }, [roomId, userId, userName, roomTitle, toast, navigate]);
+  }, [toast, navigate]);
+
+  const joinRoom = useCallback(() => {
+    if (!isConnected) {
+      console.log('useRoom: Not connected, cannot join room');
+      return;
+    }
+    console.log('useRoom: Joining room with data:', { roomId, userId, userName, roomTitle });
+    socketManager.joinRoom(roomId, userId, userName, roomTitle);
+  }, [roomId, userId, userName, roomTitle, isConnected]);
 
   const disconnectFromRoom = useCallback(() => {
     if (!isInitialized.current) {
@@ -192,12 +199,18 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     }
 
     connectToRoom();
+    joinRoom();
 
     return () => {
       console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
   }, [connectToRoom, disconnectFromRoom, roomId, userId, userName, toast, navigate]);
+
+  // Handle roomTitle changes without disconnecting
+  useEffect(() => {
+    joinRoom();
+  }, [roomTitle, joinRoom]);
 
   return {
     users,

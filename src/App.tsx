@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundaryWrapper from './components/ErrorBoundary';
 
 const queryClient = new QueryClient();
 
@@ -33,7 +34,10 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/room/:roomId" element={<Room />} />
+              <Route path="/room/:roomId" element={
+                <ErrorBoundaryWrapper>
+                <Room />
+              </ErrorBoundaryWrapper>} />
               <Route path="/friends" element={<Friends />} />
             </Route>
           </Routes>

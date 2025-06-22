@@ -5,7 +5,7 @@ import { Heart, Users } from 'lucide-react';
 import axios from 'axios';
 
 interface Participant {
-  id: string; // Changed from _id to id to match API
+  id: string;
   name: string;
   photo?: string;
   likes?: number;
@@ -28,7 +28,6 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
     const fetchParticipants = async () => {
       setLoading(true);
       try {
-        // Get all unique participant IDs from all rooms
         const allParticipantIds = new Set<string>();
         rooms.forEach((room) => {
           if (room.participants && Array.isArray(room.participants)) {
@@ -40,7 +39,6 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
           }
         });
 
-        // Fetch participant details (limit to first 10 for display)
         const participantIds = Array.from(allParticipantIds).slice(0, 10);
         const participantPromises = participantIds.map((userId) =>
           axios
@@ -74,68 +72,17 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
     }
   }, [rooms]);
 
-  // Show dummy data if no participants
   const dummyParticipants = [
-    {
-      id: 'dummy1',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy2',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy3',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy4',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy5',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy1',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy2',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy3',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy4',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
-    {
-      id: 'dummy5',
-      name: '',
-      photo: '',
-      likes: 0,
-    },
+    { id: 'dummy1', name: '', photo: '', likes: 0 },
+    { id: 'dummy2', name: '', photo: '', likes: 0 },
+    { id: 'dummy3', name: '', photo: '', likes: 0 },
+    { id: 'dummy4', name: '', photo: '', likes: 0 },
+    { id: 'dummy5', name: '', photo: '', likes: 0 },
+    { id: 'dummy6', name: '', photo: '', likes: 0 },
+    { id: 'dummy7', name: '', photo: '', likes: 0 },
+    { id: 'dummy8', name: '', photo: '', likes: 0 },
+    { id: 'dummy9', name: '', photo: '', likes: 0 },
+    { id: 'dummy10', name: '', photo: '', likes: 0 },
   ];
 
   const displayParticipants = participants.length > 0 ? participants : dummyParticipants;
@@ -150,20 +97,19 @@ export function ParticipantsCircle({ rooms, onUserClick }: ParticipantsCirclePro
   }
 
   return (
-    //scroll horizontally
-    <div className="space-y-4 *:overflow-x-auto "> 
-      <div className="flex items-center gap-4 ">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
         <Users className="h-5 w-5 text-blue-500" />
         <span className="text-sm text-muted-foreground">
           {participants.length > 0 ? 'Currently active participants' : 'Preview participants'}
         </span>
       </div>
-      <div  className="flex flex-wrap gap-4">
+      <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100">
         {displayParticipants.map((participant) => (
           <div
             key={participant.id}
             onClick={() => onUserClick(participant)}
-            className="flex flex-col items-center space-y-2 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group"
+            className="flex flex-col items-center space-y-2 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group min-w-[120px]"
           >
             <div className="relative">
               <Avatar className="w-16 h-16 border-2 border-blue-400 group-hover:border-blue-500 transition-colors">
