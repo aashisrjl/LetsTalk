@@ -15,6 +15,7 @@ interface User {
   userId: string;
   userName: string;
   photo?: string;
+  _id: string;
 }
 
 interface RoomData {
@@ -37,7 +38,7 @@ interface SidePanelProps {
   currentUserId: string;
   isOwner: boolean;
   onKickUser: (userId: string) => void;
-  onViewProfile: (userId: string) => void;
+  // onViewProfile: (userId: string) => void;
   
   // Common props
   isConnected: boolean;
@@ -54,7 +55,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   currentUserId,
   isOwner,
   onKickUser,
-  onViewProfile,
+  // onViewProfile,
   isConnected,
   roomData,
 }) => {
@@ -88,7 +89,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
           isOwner={isOwner}
           isConnected={isConnected}
           onKickUser={onKickUser}
-          onViewProfile={onViewProfile}
+          // onViewProfile={onViewProfile}
         />
       </TabsContent>
       <TabsContent value="info" className="flex-1 min-h-0 p-4 space-y-4">

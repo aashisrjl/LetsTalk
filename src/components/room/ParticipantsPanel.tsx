@@ -1,14 +1,28 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Crown, UserMinus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import axios from 'axios';
+import { UserProfileModal } from '../userProfileModal';
 
 interface User {
+  users: User[];
   userId: string;
   userName: string;
   photo?: string;
+    _id: string;
+  name: string;
+  email?: string;
+  bio?: string;
+  location?: string;
+  joinDate?: string;
+  likes?: number;
+  followers?: string[];
+  friends?: string[];
+  likedBy?: string[];
 }
 
 interface ParticipantsPanelProps {
@@ -28,9 +42,45 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
   isOwner,
   isConnected,
   onKickUser,
-  onViewProfile,
 }) => {
   console.log("ParticipantsPanel rendered with users:", users);
+  const [isLoading, setIsLoading] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+     const handleParticipantClick = async (participantId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`http://localhost:3000/users/${participantId}`, {
+        withCredentials: true,
+      });
+      if (response.data.success && response.data.user) {
+        setSelectedUser(response.data.user);
+        setIsProfileModalOpen(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch user profile",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    } catch (error: any) {
+      console.error(`RoomInfoModal: Failed to fetch user profile ${participantId}:`, {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch user profile",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="h-full flex flex-col p-4">
       <ScrollArea className="flex-1">
@@ -44,7 +94,7 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
               <div 
                 key={user.userId} 
                 className="flex items-center justify-between p-2 rounded-lg border border-transparent cursor-pointer hover:bg-slate-700/50 hover:border-slate-600"
-                onClick={() => onViewProfile(user.userId)}
+                onClick={() => handleParticipantClick(user.userId)}
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
@@ -79,6 +129,17 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
           )}
         </div>
       </ScrollArea>
+      {selectedUser && (
+              <UserProfileModal
+                user={selectedUser}
+                currentUserId={selectedUser?._id || ""} 
+                isOpen={isProfileModalOpen}
+                onClose={() => {
+                  setIsProfileModalOpen(false);
+                  setSelectedUser(null);
+                }}
+              />
+            )}
     </div>
   );
 };
