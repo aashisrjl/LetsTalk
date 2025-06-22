@@ -56,9 +56,10 @@ interface RoomInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   room: Room;
+  currentUserId: string;
 }
 
-export function RoomInfoModal({ isOpen, onClose, room }: RoomInfoModalProps) {
+export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoModalProps) {
   const { toast } = useToast();
   const [participantsDetails, setParticipantsDetails] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(false);

@@ -175,7 +175,7 @@ const Room = () => {
           currentUserId={stableUserData.id}
           isOwner={isOwner}
           onKickUser={kickUser}
-          onViewProfile={(userId) => console.log('View profile:', userId)}
+          // onViewProfile={(userId) => console.log('View profile:', userId)}
           isConnected={isConnected}
           roomData={roomData}
         />

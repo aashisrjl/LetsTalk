@@ -158,7 +158,8 @@ const Rooms = () => {
                  
                     <ParticipantsCircle
                       rooms={filteredRooms}
-                      onUserClick={handleUserClick}
+                      currentUserId="current-user-id" // Replace with actual current user ID from auth context
+                      // onUserClick={handleUserClick}
                     />
                 </div>
 
@@ -204,9 +205,10 @@ const Rooms = () => {
                           room={{
                             ...room,
                             thumbnailUrl: `/icon.png`, // from public folder
-                            likes: Math.floor(Math.random() * 500) + 20,
+                            
                           }}
-                          onClick={handleJoinRoom}
+                          // onClick={handleJoinRoom}
+                          currentUserId={room.createdBy} // Replace with actual current user ID from auth context
                         />
                       ))
                     ) : (

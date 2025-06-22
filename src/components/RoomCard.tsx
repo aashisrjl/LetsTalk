@@ -1,9 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, UserCheck, Settings, Heart, Phone } from "lucide-react";
+import { Globe, UserCheck, Settings, Users, Phone } from "lucide-react";
 import { RoomInfoModal } from "./RoomInfoModal";
+import { useNavigate } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Room {
   _id: string;
@@ -16,16 +17,20 @@ interface Room {
   participants: string[];
   maxParticipants: number;
   tags?: string[];
-  likes?: number;
   thumbnailUrl?: string;
+  currentUserId?: string; // Optional, for authenticated user
+  createdBy?: string; // Optional, for room creator ID
 }
 
 interface RoomCardProps {
   room: Room;
-  onClick: (roomId: string) => void;
+  currentUserId: string; // Added currentUserId
+  isOpen?: boolean; // Optional prop for modal
+  onClose?: () => void; // Optional prop for modal close handler
+  createdBy?: string; // Optional prop for room creator ID
 }
 
-export function RoomCard({ room, onClick }: RoomCardProps) {
+export function RoomCard({ room }: RoomCardProps) {
   const {
     title,
     language,
@@ -34,12 +39,12 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
     level,
     roomId,
     thumbnailUrl,
-    likes,
     topic,
     description,
   } = room;
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const isRoomFull = (participants?.length || 0) >= maxParticipants;
 
@@ -51,13 +56,13 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
   const handleJoinRoom = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (roomId && !isRoomFull) {
-      onClick(roomId);
+      navigate(`/room/${roomId}`);
     }
   };
 
   const handleCardClick = () => {
     if (roomId && !isRoomFull) {
-      onClick(roomId);
+      navigate(`/room/${roomId}`);
     }
   };
 
@@ -74,16 +79,27 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
               {language || "Language"} | {level || "Any Level"}
             </CardTitle>
           </div>
-          <Button variant="ghost" size="icon" className="text-blue-400 hover:bg-gray-800 hover:text-blue-300" onClick={handleSettingsClick}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-blue-400 hover:bg-gray-800 hover:text-blue-300"
+            onClick={handleSettingsClick}
+          >
             <Settings className="h-5 w-5" />
           </Button>
         </CardHeader>
 
         <CardContent className="p-4 flex flex-col items-center justify-center space-y-4">
-          <img src={thumbnailUrl || `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`} alt={title} className="w-40 h-40 rounded-full object-cover border-4 border-gray-800" />
+          <img
+            src={thumbnailUrl || `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`}
+            alt={title}
+            className="w-40 h-40 rounded-full object-cover border-4 border-gray-800"
+          />
 
           <div className="text-center min-h-[4rem]">
-            <h3 className="font-bold text-lg text-white truncate" title={topic || title}>{topic || title}</h3>
+            <h3 className="font-bold text-lg text-white truncate" title={topic || title}>
+              {topic || title}
+            </h3>
             {description && (
               <p className="text-sm text-gray-400 mt-1 max-w-[250px] truncate" title={description}>
                 {description}
@@ -91,10 +107,19 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-1 text-white text-sm">
-            <Heart className="w-5 h-5 text-red-500" fill="currentColor" />
-            <span>{likes || 0}</span>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 text-white text-sm bg-gradient-to-r from-blue-500 to-purple-500 rounded-full px-3 py-1 shadow-md">
+                  <Users className="w-5 h-5 text-white" />
+                  <span className="font-semibold">{participants?.length || 0}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{participants?.length || 0} participant{participants?.length !== 1 ? "s" : ""}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <Button
             variant="outline"
@@ -120,6 +145,7 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
         room={room}
+        currentUserId={ room.createdBy} // Pass currentUserId
       />
     </>
   );

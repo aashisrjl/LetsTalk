@@ -11,6 +11,7 @@ interface Participant {
   name: string;
   photo?: string;
   likes?: number;
+  currentUserId?: string; // Optional, for authenticated user
 }
 
 interface User {
