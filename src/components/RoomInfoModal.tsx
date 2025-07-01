@@ -52,6 +52,7 @@ interface User {
   likedBy?: string[];
 }
 
+// Fixed ProcessedParticipant type
 type ProcessedParticipant = 
   | { readonly id: string; readonly needsFetch: true }
   | { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false };
@@ -112,7 +113,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
             }
 
             // Fetch data only for string IDs
-            const participantsToFetch = validParticipants.filter(p => p.needsFetch);
+            const participantsToFetch = validParticipants.filter((p): p is { readonly id: string; readonly needsFetch: true } => p.needsFetch);
             let fetchedParticipants: Participant[] = [];
 
             if (participantsToFetch.length > 0) {

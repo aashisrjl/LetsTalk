@@ -41,8 +41,10 @@ app.get('/', (req, res) => {
 // Routes
 const userRoutes = require('./routes/user.routes');
 const roomRoutes = require('./routes/room.routes');
+const notificationRoutes = require('./routes/notification.routes');
 app.use('/', roomRoutes);
 app.use('/', userRoutes);
+app.use('/', notificationRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {
