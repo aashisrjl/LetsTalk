@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,20 +70,20 @@ export function RoomCard({ room }: RoomCardProps) {
   return (
     <>
       <Card
-        className="bg-gray-900 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg overflow-hidden group w-full cursor-pointer"
+        className="bg-card border-border text-card-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg overflow-hidden group w-full cursor-pointer"
         onClick={handleCardClick}
       >
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            <Globe className="h-6 w-6 text-blue-400" />
-            <CardTitle className="text-md font-semibold text-white/90">
+            <Globe className="h-6 w-6 text-blue-500" />
+            <CardTitle className="text-md font-semibold">
               {language || "Language"} | {level || "Any Level"}
             </CardTitle>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="text-blue-400 hover:bg-gray-800 hover:text-blue-300"
+            className="text-blue-500 hover:bg-muted hover:text-blue-600"
             onClick={handleSettingsClick}
           >
             <Settings className="h-5 w-5" />
@@ -93,15 +94,15 @@ export function RoomCard({ room }: RoomCardProps) {
           <img
             src={thumbnailUrl || `https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=300&h=300&auto=format&fit=crop`}
             alt={title}
-            className="w-40 h-40 rounded-full object-cover border-4 border-gray-800"
+            className="w-40 h-40 rounded-full object-cover border-4 border-border"
           />
 
           <div className="text-center min-h-[4rem]">
-            <h3 className="font-bold text-lg text-white truncate" title={topic || title}>
+            <h3 className="font-bold text-lg text-foreground truncate" title={topic || title}>
               {topic || title}
             </h3>
             {description && (
-              <p className="text-sm text-gray-400 mt-1 max-w-[250px] truncate" title={description}>
+              <p className="text-sm text-muted-foreground mt-1 max-w-[250px] truncate" title={description}>
                 {description}
               </p>
             )}
@@ -123,7 +124,7 @@ export function RoomCard({ room }: RoomCardProps) {
 
           <Button
             variant="outline"
-            className="w-full border-dashed border-blue-400 text-blue-400 bg-transparent hover:bg-blue-400 hover:text-white disabled:border-gray-600 disabled:text-gray-600 disabled:bg-transparent mt-2"
+            className="w-full border-dashed border-blue-500 text-blue-500 bg-transparent hover:bg-blue-500 hover:text-white disabled:border-muted-foreground disabled:text-muted-foreground disabled:bg-transparent mt-2"
             disabled={isRoomFull}
             onClick={handleJoinRoom}
           >
