@@ -8,14 +8,17 @@ import { toast } from '@/hooks/use-toast';
 import axios from 'axios';
 import { UserProfileModal } from '../userProfileModal';
 
-interface User {
-  users: User[];
+interface RoomUser {
   userId: string;
   userName: string;
   photo?: string;
-    _id: string;
+}
+
+interface ProfileUser {
+  _id: string;
   name: string;
   email?: string;
+  photo?: string;
   bio?: string;
   location?: string;
   joinDate?: string;
@@ -26,13 +29,12 @@ interface User {
 }
 
 interface ParticipantsPanelProps {
-  users: User[];
+  users: RoomUser[];
   ownerId: string;
   currentUserId: string;
   isOwner: boolean;
   isConnected: boolean;
   onKickUser: (userId: string) => void;
-  onViewProfile: (userId: string) => void;
 }
 
 export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
@@ -45,10 +47,10 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
 }) => {
   console.log("ParticipantsPanel rendered with users:", users);
   const [isLoading, setIsLoading] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ProfileUser | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-     const handleParticipantClick = async (participantId: string) => {
+  const handleParticipantClick = async (participantId: string) => {
     try {
       setIsLoading(true);
       const response = await axios.get(`http://localhost:3000/users/${participantId}`, {
@@ -66,7 +68,7 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
         });
       }
     } catch (error: any) {
-      console.error(`RoomInfoModal: Failed to fetch user profile ${participantId}:`, {
+      console.error(`ParticipantsPanel: Failed to fetch user profile ${participantId}:`, {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message,
@@ -81,6 +83,7 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
       setIsLoading(false);
     }
   };
+
   return (
     <div className="h-full flex flex-col p-4">
       <ScrollArea className="flex-1">
@@ -130,16 +133,16 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
         </div>
       </ScrollArea>
       {selectedUser && (
-              <UserProfileModal
-                user={selectedUser}
-                currentUserId={selectedUser?._id || ""} 
-                isOpen={isProfileModalOpen}
-                onClose={() => {
-                  setIsProfileModalOpen(false);
-                  setSelectedUser(null);
-                }}
-              />
-            )}
+        <UserProfileModal
+          user={selectedUser}
+          currentUserId={currentUserId} 
+          isOpen={isProfileModalOpen}
+          onClose={() => {
+            setIsProfileModalOpen(false);
+            setSelectedUser(null);
+          }}
+        />
+      )}
     </div>
   );
 };

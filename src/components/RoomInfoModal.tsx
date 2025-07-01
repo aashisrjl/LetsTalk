@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,13 @@ interface User {
   likedBy?: string[];
 }
 
+interface ProcessedParticipant {
+  id: string;
+  name?: string;
+  photo?: string;
+  needsFetch: boolean;
+}
+
 interface RoomInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -79,8 +87,8 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
           setParticipantsDetails([]);
 
           try {
-            // Process participants
-            const validParticipants = room.participants
+            // Process participants with proper typing
+            const validParticipants: ProcessedParticipant[] = room.participants
               .map((participant, index) => {
                 console.log(`RoomInfoModal: Processing participant[${index}]:`, participant);
                 if (typeof participant === 'string') {
@@ -98,11 +106,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
                 console.warn(`RoomInfoModal: Invalid participant[${index}]:`, participant);
                 return null;
               })
-              .filter((p): p is { id: string; name?: string; photo?: string } => {
-                const isValid = p !== null;
-                console.log(`RoomInfoModal: Filter participant:`, p, 'Valid:', isValid);
-                return isValid;
-              });
+              .filter((p): p is ProcessedParticipant => p !== null);
 
             console.log('RoomInfoModal: Valid participant entries:', validParticipants);
 
