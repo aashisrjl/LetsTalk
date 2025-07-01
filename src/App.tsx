@@ -10,6 +10,7 @@ import Rooms from './pages/Rooms';
 import Room from './pages/Room';
 import Coffee from './pages/Coffee';
 import Friends from './pages/Friends';
+import Chat from './pages/Chat';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from './contexts/AuthContext';
@@ -39,6 +40,8 @@ function App() {
                 <Room />
               </ErrorBoundaryWrapper>} />
               <Route path="/friends" element={<Friends />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/chat/:userId" element={<Chat />} />
             </Route>
           </Routes>
           <Toaster />

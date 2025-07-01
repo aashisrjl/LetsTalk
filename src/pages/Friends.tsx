@@ -12,10 +12,12 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Sidebar } from '@/components/Sidebar';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Friends = () => {
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch current user's social data
   const { data: userData, isLoading, refetch } = useQuery({
@@ -122,6 +124,10 @@ const Friends = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleMessage = (userId: string) => {
+    navigate(`/chat/${userId}`);
   };
 
   if (isLoading) {
@@ -240,7 +246,11 @@ const Friends = () => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleMessage(friend._id)}
+                              >
                                 <MessageSquare className="w-4 h-4 mr-2" />
                                 Message
                               </Button>

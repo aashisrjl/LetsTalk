@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -114,7 +113,7 @@ export function RoomInfoModal({ isOpen, onClose, room, currentUserId }: RoomInfo
             }
 
             // Fetch data only for string IDs - fixed type predicate
-            const participantsToFetch = validParticipants.filter((p): p is { readonly id: string; readonly needsFetch: true } => p.needsFetch);
+            const participantsToFetch = validParticipants.filter((p) => p.needsFetch);
             let fetchedParticipants: Participant[] = [];
 
             if (participantsToFetch.length > 0) {
@@ -146,7 +145,7 @@ export function RoomInfoModal({ isOpen, onClose, room, currentUserId }: RoomInfo
             // Combine fetched and pre-populated participants - fixed type predicate
             const allParticipants = [
               ...validParticipants
-                .filter((p): p is { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false } => !p.needsFetch)
+                .filter((p) => !p.needsFetch)
                 .map(p => ({ 
                   id: p.id, 
                   name: p.name, 

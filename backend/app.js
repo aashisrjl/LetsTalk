@@ -42,9 +42,11 @@ app.get('/', (req, res) => {
 const userRoutes = require('./routes/user.routes');
 const roomRoutes = require('./routes/room.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const chatRoutes = require('./routes/chat.routes');
 app.use('/', roomRoutes);
 app.use('/', userRoutes);
 app.use('/', notificationRoutes);
+app.use('/', chatRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {

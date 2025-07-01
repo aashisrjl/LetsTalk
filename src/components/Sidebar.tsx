@@ -1,6 +1,7 @@
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, User, Bell, Settings, X, Users, FileText } from "lucide-react";
+import { Home, User, Bell, Settings, X, Users, FileText, MessageSquare } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps {
@@ -12,6 +13,7 @@ const navigation = [
   { name: "Home", icon: Home, path: "/" },
   { name: "Profile", icon: User, path: "/profile" },
   { name: "Friends", icon: Users, path: "/friends" },
+  { name: "Chat", icon: MessageSquare, path: "/chat" },
   { name: "Notifications", icon: Bell, path: "/notifications" },
   { name: "Settings", icon: Settings, path: "/settings" },
   { name: "Privacy Policy", icon: FileText, path: "/privacy-policy" },
@@ -54,7 +56,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <nav className="flex-1 space-y-1 p-4">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = location.pathname === item.path || 
+                (item.path === '/chat' && location.pathname.startsWith('/chat'));
               return (
                 <Button
                   key={item.name}
