@@ -90,7 +90,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
                 console.log(`RoomInfoModal: Processing participant[${index}]:`, participant);
                 if (typeof participant === 'string') {
                   console.log(`RoomInfoModal: Participant[${index}] is string ID: ${participant}`);
-                  return { id: participant, needsFetch: true };
+                  return { id: participant, needsFetch: true } as const;
                 } else if (typeof participant === 'object' && participant !== null && '_id' in participant && participant._id) {
                   console.log(`RoomInfoModal: Participant[${index}] is object with _id: ${participant._id}`);
                   return {
@@ -98,7 +98,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
                     name: (participant as RoomParticipant).name,
                     photo: (participant as RoomParticipant).photo,
                     needsFetch: false,
-                  };
+                  } as const;
                 }
                 console.warn(`RoomInfoModal: Invalid participant[${index}]:`, participant);
                 return null;
@@ -146,7 +146,11 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
             const allParticipants = [
               ...validParticipants
                 .filter(p => !p.needsFetch)
-                .map(p => ({ id: p.id, name: p.name, photo: p.photo })),
+                .map(p => ({ 
+                  id: p.id, 
+                  name: (p as { id: string; name: string; photo?: string; needsFetch: false }).name, 
+                  photo: (p as { id: string; name: string; photo?: string; needsFetch: false }).photo 
+                })),
               ...fetchedParticipants,
             ];
 
