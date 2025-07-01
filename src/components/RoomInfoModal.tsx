@@ -53,12 +53,9 @@ interface User {
   likedBy?: string[];
 }
 
-interface ProcessedParticipant {
-  id: string;
-  name?: string;
-  photo?: string;
-  needsFetch: boolean;
-}
+type ProcessedParticipant = 
+  | { id: string; needsFetch: true }
+  | { id: string; name: string; photo?: string; needsFetch: false };
 
 interface RoomInfoModalProps {
   isOpen: boolean;
@@ -149,7 +146,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
             const allParticipants = [
               ...validParticipants
                 .filter(p => !p.needsFetch)
-                .map(p => ({ id: p.id, name: p.name!, photo: p.photo })),
+                .map(p => ({ id: p.id, name: p.name, photo: p.photo })),
               ...fetchedParticipants,
             ];
 
@@ -179,6 +176,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
       }
     }
   }, [isOpen, room, toast]);
+
    const handleParticipantClick = async (participantId: string) => {
     try {
       setIsLoading(true);
