@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -54,8 +53,8 @@ interface User {
 }
 
 type ProcessedParticipant = 
-  | { id: string; needsFetch: true }
-  | { id: string; name: string; photo?: string; needsFetch: false };
+  | { readonly id: string; readonly needsFetch: true }
+  | { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false };
 
 interface RoomInfoModalProps {
   isOpen: boolean;
@@ -148,8 +147,8 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
                 .filter(p => !p.needsFetch)
                 .map(p => ({ 
                   id: p.id, 
-                  name: (p as { id: string; name: string; photo?: string; needsFetch: false }).name, 
-                  photo: (p as { id: string; name: string; photo?: string; needsFetch: false }).photo 
+                  name: (p as { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false }).name, 
+                  photo: (p as { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false }).photo 
                 })),
               ...fetchedParticipants,
             ];
@@ -181,7 +180,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
     }
   }, [isOpen, room, toast]);
 
-   const handleParticipantClick = async (participantId: string) => {
+  const handleParticipantClick = async (participantId: string) => {
     try {
       setIsLoading(true);
       const response = await axios.get(`http://localhost:3000/users/${participantId}`, {
