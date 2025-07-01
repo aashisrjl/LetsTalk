@@ -84,6 +84,7 @@ const Friends = () => {
 
   const handleUnfriend = async (userId: string) => {
     try {
+      console.log('Attempting to unfriend user:', userId);
       await axios.post(`http://localhost:3000/users/${userId}/unfriend`, {}, {
         withCredentials: true,
       });
@@ -92,10 +93,11 @@ const Friends = () => {
         description: "User has been removed from your friends list",
       });
       refetch();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unfriend error:', error);
       toast({
         title: "Error",
-        description: "Failed to remove friend",
+        description: error.response?.data?.message || "Failed to remove friend",
         variant: "destructive",
       });
     }
@@ -103,6 +105,7 @@ const Friends = () => {
 
   const handleUnfollow = async (userId: string) => {
     try {
+      console.log('Attempting to unfollow user:', userId);
       await axios.post(`http://localhost:3000/users/${userId}/unfollow`, {}, {
         withCredentials: true,
       });
@@ -111,10 +114,11 @@ const Friends = () => {
         description: "You are no longer following this user",
       });
       refetch();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unfollow error:', error);
       toast({
         title: "Error",
-        description: "Failed to unfollow user",
+        description: error.response?.data?.message || "Failed to unfollow user",
         variant: "destructive",
       });
     }
@@ -222,7 +226,7 @@ const Friends = () => {
                     <ScrollArea className="h-96">
                       <div className="space-y-4">
                         {friendsData.map((friend: any) => (
-                          <div key={friend.id} className="flex items-center justify-between p-4 rounded-lg border">
+                          <div key={friend._id} className="flex items-center justify-between p-4 rounded-lg border">
                             <div className="flex items-center gap-3">
                               <Avatar>
                                 <AvatarImage src={friend.photo} />
@@ -243,7 +247,7 @@ const Friends = () => {
                               <Button 
                                 variant="destructive" 
                                 size="sm"
-                                onClick={() => handleUnfriend(friend.id)}
+                                onClick={() => handleUnfriend(friend._id)}
                               >
                                 <UserMinus className="w-4 h-4" />
                               </Button>
@@ -272,7 +276,7 @@ const Friends = () => {
                     <ScrollArea className="h-96">
                       <div className="space-y-4">
                         {followersData.map((follower: any) => (
-                          <div key={follower.id} className="flex items-center justify-between p-4 rounded-lg border">
+                          <div key={follower._id} className="flex items-center justify-between p-4 rounded-lg border">
                             <div className="flex items-center gap-3">
                               <Avatar>
                                 <AvatarImage src={follower.photo} />
@@ -310,7 +314,7 @@ const Friends = () => {
                     <ScrollArea className="h-96">
                       <div className="space-y-4">
                         {followingData.map((following: any) => (
-                          <div key={following.id} className="flex items-center justify-between p-4 rounded-lg border">
+                          <div key={following._id} className="flex items-center justify-between p-4 rounded-lg border">
                             <div className="flex items-center gap-3">
                               <Avatar>
                                 <AvatarImage src={following.photo} />
@@ -326,7 +330,7 @@ const Friends = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleUnfollow(following.id)}
+                              onClick={() => handleUnfollow(following._id)}
                             >
                               Unfollow
                             </Button>

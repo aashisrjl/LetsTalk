@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -52,7 +53,7 @@ interface User {
   likedBy?: string[];
 }
 
-// Fixed ProcessedParticipant type
+// Fixed ProcessedParticipant type - made photo consistently optional
 type ProcessedParticipant = 
   | { readonly id: string; readonly needsFetch: true }
   | { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false };
@@ -64,7 +65,7 @@ interface RoomInfoModalProps {
   currentUserId: string;
 }
 
-export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoModalProps) {
+export function RoomInfoModal({ isOpen, onClose, room, currentUserId }: RoomInfoModalProps) {
   const { toast } = useToast();
   const [participantsDetails, setParticipantsDetails] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,7 +113,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
               return;
             }
 
-            // Fetch data only for string IDs
+            // Fetch data only for string IDs - fixed type predicate
             const participantsToFetch = validParticipants.filter((p): p is { readonly id: string; readonly needsFetch: true } => p.needsFetch);
             let fetchedParticipants: Participant[] = [];
 
@@ -142,7 +143,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
                 }));
             }
 
-            // Combine fetched and pre-populated participants
+            // Combine fetched and pre-populated participants - fixed type predicate
             const allParticipants = [
               ...validParticipants
                 .filter((p): p is { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false } => !p.needsFetch)
@@ -311,7 +312,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
     {selectedUser && (
         <UserProfileModal
           user={selectedUser}
-          currentUserId={selectedUser?._id || ""} 
+          currentUserId={currentUserId} 
           isOpen={isProfileModalOpen}
           onClose={() => {
             setIsProfileModalOpen(false);
@@ -319,6 +320,6 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
           }}
         />
       )}
-      </>
+    </>
   );
 }
