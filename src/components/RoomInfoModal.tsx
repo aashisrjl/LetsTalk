@@ -84,7 +84,7 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
 
           try {
             // Process participants with proper typing
-            const validParticipants: ProcessedParticipant[] = room.participants
+            const validParticipants = room.participants
               .map((participant, index) => {
                 console.log(`RoomInfoModal: Processing participant[${index}]:`, participant);
                 if (typeof participant === 'string') {
@@ -144,11 +144,11 @@ export function RoomInfoModal({ isOpen, onClose, room,currentUserId }: RoomInfoM
             // Combine fetched and pre-populated participants
             const allParticipants = [
               ...validParticipants
-                .filter(p => !p.needsFetch)
+                .filter((p): p is { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false } => !p.needsFetch)
                 .map(p => ({ 
                   id: p.id, 
-                  name: (p as { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false }).name, 
-                  photo: (p as { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false }).photo 
+                  name: p.name, 
+                  photo: p.photo 
                 })),
               ...fetchedParticipants,
             ];
