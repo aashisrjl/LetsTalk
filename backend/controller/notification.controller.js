@@ -115,10 +115,39 @@ const createNotification = async (recipientId, senderId, type, title, descriptio
   }
 };
 
+// API endpoint to create notification from frontend
+const createNotificationAPI = catchAsyncError(async (req, res) => {
+  const { recipientId, type, title, description, data } = req.body;
+  const senderId = req.user.id;
+
+  if (!recipientId || !type || !title || !description) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: recipientId, type, title, description'
+    });
+  }
+
+  const notification = await createNotification(recipientId, senderId, type, title, description, data);
+
+  if (!notification) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create notification'
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    notification,
+    currentUserName: req.user.name
+  });
+});
+
 module.exports = {
   getUserNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
-  createNotification
+  createNotification,
+  createNotificationAPI
 };

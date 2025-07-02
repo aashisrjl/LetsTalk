@@ -52,10 +52,10 @@ interface User {
   likedBy?: string[];
 }
 
-// Fixed ProcessedParticipant type - made photo consistently optional
+// Fixed ProcessedParticipant type 
 type ProcessedParticipant = 
   | { readonly id: string; readonly needsFetch: true }
-  | { readonly id: string; readonly name: string; readonly photo?: string; readonly needsFetch: false };
+  | { readonly id: string; readonly name: string; readonly photo: string | undefined; readonly needsFetch: false };
 
 interface RoomInfoModalProps {
   isOpen: boolean;
@@ -103,7 +103,7 @@ export function RoomInfoModal({ isOpen, onClose, room, currentUserId }: RoomInfo
                 console.warn(`RoomInfoModal: Invalid participant[${index}]:`, participant);
                 return null;
               })
-              .filter((p): p is ProcessedParticipant => p !== null);
+              .filter((p): p is ProcessedParticipant => p !== null && (p.needsFetch || typeof p.name === 'string'));
 
             console.log('RoomInfoModal: Valid participant entries:', validParticipants);
 
@@ -142,10 +142,10 @@ export function RoomInfoModal({ isOpen, onClose, room, currentUserId }: RoomInfo
                 }));
             }
 
-            // Combine fetched and pre-populated participants - fixed type predicate
+            // Combine fetched and pre-populated participants
             const allParticipants = [
               ...validParticipants
-                .filter((p) => !p.needsFetch)
+                .filter((p): p is ProcessedParticipant & { needsFetch: false } => !p.needsFetch)
                 .map(p => ({ 
                   id: p.id, 
                   name: p.name, 

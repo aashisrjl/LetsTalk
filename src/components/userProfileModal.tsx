@@ -78,6 +78,19 @@ export const UserProfileModal = ({ user, currentUserId, isOpen, onClose }: UserP
         setIsFollowing(true);
         setFollowersCount(prev => prev + 1);
         
+        // Create notification for the followed user
+        try {
+          await axios.post('http://localhost:3000/notifications', {
+            recipientId: user._id,
+            type: 'follow',
+            title: 'New Follower',
+            description: `${response.data.currentUserName || 'Someone'} started following you`,
+            data: { followerId: currentUserId, action: 'follow' }
+          }, { withCredentials: true });
+        } catch (notifError) {
+          console.error('Failed to create follow notification:', notifError);
+        }
+        
         toast({
           title: "Success",
           description: `You are now following ${user.name}`,
@@ -138,6 +151,19 @@ export const UserProfileModal = ({ user, currentUserId, isOpen, onClose }: UserP
         setIsFriend(true);
         setFriendsCount(prev => prev + 1);
         
+        // Create notification for the new friend
+        try {
+          await axios.post('http://localhost:3000/notifications', {
+            recipientId: user._id,
+            type: 'friend',
+            title: 'New Friend Request',
+            description: `${response.data.currentUserName || 'Someone'} added you as a friend`,
+            data: { friendId: currentUserId, action: 'friend_added' }
+          }, { withCredentials: true });
+        } catch (notifError) {
+          console.error('Failed to create friend notification:', notifError);
+        }
+        
         toast({
           title: "Success",
           description: `${user.name} added as friend`,
@@ -197,6 +223,20 @@ export const UserProfileModal = ({ user, currentUserId, isOpen, onClose }: UserP
       if (response.data.success) {
         setLikesCount(response.data.user.likes);
         setHasLiked(true);
+        
+        // Create notification for the liked user
+        try {
+          await axios.post('http://localhost:3000/notifications', {
+            recipientId: user._id,
+            type: 'like',
+            title: 'Someone Liked You!',
+            description: `${response.data.currentUserName || 'Someone'} liked your profile`,
+            data: { likerId: currentUserId, action: 'profile_liked' }
+          }, { withCredentials: true });
+        } catch (notifError) {
+          console.error('Failed to create like notification:', notifError);
+        }
+        
         toast({
           title: "Success",
           description: `You liked ${user.name}!`,

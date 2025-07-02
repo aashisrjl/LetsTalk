@@ -40,6 +40,21 @@ module.exports = (io) => {
           });
         }
 
+        // Create notification for the message recipient
+        try {
+          const { createNotification } = require('../controller/notification.controller');
+          await createNotification(
+            receiverId,
+            senderId,
+            'message',
+            'New Message',
+            `${chatMessage.sender.name} sent you a message: ${message.slice(0, 50)}${message.length > 50 ? '...' : ''}`,
+            { messageId: chatMessage._id, action: 'private_message' }
+          );
+        } catch (notifError) {
+          console.error('Failed to create message notification:', notifError);
+        }
+
         // Confirm to sender
         socket.emit('messageConfirmed', {
           message: chatMessage,
