@@ -205,7 +205,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
-  }, [connectToRoom, disconnectFromRoom, roomId, userId, userName, toast, navigate]);
+  }, [roomId, userId, userName]); // Removed unstable dependencies
 
   // Handle roomTitle changes without disconnecting
   useEffect(() => {
