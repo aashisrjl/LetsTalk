@@ -136,7 +136,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         variant: 'destructive',
       });
     }));
-  }, [toast, navigate]);
+  }, []); // Remove dependencies to prevent re-creation
 
   const joinRoom = useCallback(() => {
     if (!isConnected) {
@@ -159,23 +159,18 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     socketManager.disconnect();
     setIsConnected(false);
     isInitialized.current = false;
-  }, [roomId, userId]);
+  }, []);
 
   const sendMessage = useCallback(
     (message: string) => {
       console.log('useRoom: Sending message:', message);
       if (!isConnected) {
         console.warn('useRoom: Cannot send message: not connected');
-        toast({
-          title: 'Cannot Send Message',
-          description: 'Not connected to the room',
-          variant: 'destructive',
-        });
         return;
       }
       socketManager.sendMessage(message, userName);
     },
-    [userName, isConnected, toast]
+    [userName, isConnected]
   );
 
   const kickUser = useCallback(
@@ -189,28 +184,23 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   useEffect(() => {
     if (!roomId || !userId || !userName) {
       console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
-      toast({
-        title: 'Invalid Parameters',
-        description: 'Room ID, user ID, or username is missing',
-        variant: 'destructive',
-      });
-      navigate('/rooms');
       return;
     }
 
     connectToRoom();
-    joinRoom();
-
+    
     return () => {
       console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
-  }, [roomId, userId, userName]); // Removed unstable dependencies
+  }, [roomId, userId, userName]);
 
-  // Handle roomTitle changes without disconnecting
+  // Join room when connected and parameters are available
   useEffect(() => {
-    joinRoom();
-  }, [roomTitle, joinRoom]);
+    if (isConnected && roomId && userId && userName) {
+      joinRoom();
+    }
+  }, [isConnected, roomId, userId, userName, roomTitle]);
 
   return {
     users,
