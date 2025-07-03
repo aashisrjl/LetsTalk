@@ -217,7 +217,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     [roomId]
   );
 
-  // Initialize connection only once
+  // Initialize connection only once - remove callback dependencies to prevent re-initialization
   useEffect(() => {
     if (!roomId || !userId || !userName) {
       console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
@@ -230,14 +230,14 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
-  }, [roomId, userId, userName, connectToRoom, disconnectFromRoom]);
+  }, [roomId, userId, userName, roomTitle]); // Only depend on core params, not callbacks
 
-  // Join room when connected
+  // Join room when connected - remove callback dependency
   useEffect(() => {
     if (isConnected && roomId && userId && userName && !hasJoinedRoom.current) {
       joinRoom();
     }
-  }, [isConnected, roomId, userId, userName, joinRoom]);
+  }, [isConnected, roomId, userId, userName, roomTitle]); // Only depend on core params
 
   return {
     users,
