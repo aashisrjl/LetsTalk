@@ -43,39 +43,8 @@ const Room = () => {
     [userData?.id, userData?.name, userData?.photo]
   );
 
-  const [messageInput, setMessageInput] = useState('');
-  const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
-    queryKey: ['room', roomId],
-    queryFn: () => fetchRoomData(roomId!),
-    enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
-  });
-
-  const roomTitle = roomData?.title || 'Language Room';
-
-  // Hooks at the top to maintain rules of hooks
-  const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
-    roomId || '',
-    stableUserData?.id || '',
-    stableUserData?.name || '',
-    roomTitle
-  );
-
-  const {
-    localStream,
-    remoteStreams,
-    toggleAudio,
-    toggleVideo,
-    startScreenShare,
-    isAudioEnabled,
-    isVideoEnabled,
-    isScreenSharing,
-    streamError,
-  } = useWebRTC(roomId || '', stableUserData?.id || '', isConnected);
-
-  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', roomTitle);
-
-  // Loading and error states after hooks
-  if (isLoading || isRoomLoading) {
+  // Early returns BEFORE hooks to prevent mount/unmount cycles
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-slate-100">
         Loading...
@@ -93,11 +62,51 @@ const Room = () => {
     return <Navigate to="/rooms" replace />;
   }
 
+  const [messageInput, setMessageInput] = useState('');
+  const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
+    queryKey: ['room', roomId],
+    queryFn: () => fetchRoomData(roomId!),
+    enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
+  });
+
+  const roomTitle = roomData?.title || 'Language Room';
+
+  // Room loading check after room query
+  if (isRoomLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-slate-100">
+        Loading room...
+      </div>
+    );
+  }
+
   if (roomError) {
     console.error('Room fetch error:', roomError.message);
     navigate('/rooms');
     return null;
   }
+
+  // Hooks called only when all conditions are met
+  const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
+    roomId,
+    stableUserData.id,
+    stableUserData.name,
+    roomTitle
+  );
+
+  const {
+    localStream,
+    remoteStreams,
+    toggleAudio,
+    toggleVideo,
+    startScreenShare,
+    isAudioEnabled,
+    isVideoEnabled,
+    isScreenSharing,
+    streamError,
+  } = useWebRTC(roomId, stableUserData.id, isConnected);
+
+  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', roomTitle);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
