@@ -69,7 +69,10 @@ const Room = () => {
     enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
   });
 
-  const roomTitle = roomData?.title || 'Language Room';
+  // Stabilize roomTitle to prevent useRoom re-initializations
+  const stableRoomTitle = useMemo(() => {
+    return roomData?.title || 'Language Room';
+  }, [roomData?.title]);
 
   // Room loading check after room query
   if (isRoomLoading) {
@@ -91,7 +94,7 @@ const Room = () => {
     roomId,
     stableUserData.id,
     stableUserData.name,
-    roomTitle
+    stableRoomTitle
   );
 
   const {
@@ -106,7 +109,7 @@ const Room = () => {
     streamError,
   } = useWebRTC(roomId, stableUserData.id, isConnected);
 
-  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', roomTitle);
+  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', stableRoomTitle);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
