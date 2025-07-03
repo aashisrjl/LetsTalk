@@ -151,7 +151,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         variant: 'destructive',
       });
     }));
-  }, [toast, navigate]);
+  }, []);
 
   const joinRoom = useCallback(() => {
     if (!isConnected) {
@@ -217,7 +217,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     [roomId]
   );
 
-  // Initialize connection only once - no dependencies to prevent re-initialization
+  // Initialize connection only once
   useEffect(() => {
     if (!roomId || !userId || !userName) {
       console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
@@ -230,14 +230,14 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Cleaning up room connection...');
       disconnectFromRoom();
     };
-  }, []); // No dependencies - initialize once only
+  }, [roomId, userId, userName]); // Depend on params to re-initialize only when they change
 
-  // Join room when connected - stable check
+  // Join room when connected
   useEffect(() => {
     if (isConnected && roomId && userId && userName && !hasJoinedRoom.current) {
       joinRoom();
     }
-  }, [isConnected]); // Only depend on connection state
+  }, [isConnected, roomId, userId, userName]); // Depend on all relevant params
 
   return {
     users,
