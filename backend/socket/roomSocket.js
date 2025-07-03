@@ -95,11 +95,18 @@ module.exports = (io) => {
 
     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
       try {
-        // Prevent duplicate joins from the same user
+        // Enhanced duplicate prevention
         if (socket.roomId === roomId && socket.userId === userId) {
           console.log(`🔄 User ${userId} already in room ${roomId}, skipping duplicate join`);
-          emitRoomUpdate(roomId); // Send current state
+          emitRoomUpdate(roomId);
           return;
+        }
+
+        // Check if user is already in the room from another socket
+        const existingUser = roomState.users[roomId]?.find(u => u.userId === userId);
+        if (existingUser && existingUser.socketId !== socket.id) {
+          console.log(`🚫 User ${userId} already in room ${roomId} with different socket, removing old connection`);
+          await removeUserFromRoom(roomId, userId);
         }
 
         const room = await Room.findOne({ roomId }).populate('participants', 'name photo');
