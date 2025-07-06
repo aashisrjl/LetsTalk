@@ -95,18 +95,30 @@ module.exports = (io) => {
 
     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
       try {
-        // Enhanced duplicate prevention
+        // Prevent multiple joins from same socket
         if (socket.roomId === roomId && socket.userId === userId) {
-          console.log(`🔄 User ${userId} already in room ${roomId}, skipping duplicate join`);
+          console.log(`🔄 User ${userId} already in room ${roomId} on this socket, skipping`);
           emitRoomUpdate(roomId);
           return;
         }
 
         // Check if user is already in the room from another socket
         const existingUser = roomState.users[roomId]?.find(u => u.userId === userId);
-        if (existingUser && existingUser.socketId !== socket.id) {
-          console.log(`🚫 User ${userId} already in room ${roomId} with different socket, removing old connection`);
-          await removeUserFromRoom(roomId, userId);
+        if (existingUser) {
+          if (existingUser.socketId === socket.id) {
+            console.log(`🔄 User ${userId} already in room ${roomId} with same socket, skipping`);
+            emitRoomUpdate(roomId);
+            return;
+          } else {
+            console.log(`🔄 User ${userId} switching socket in room ${roomId}, updating socketId`);
+            existingUser.socketId = socket.id;
+            socket.join(roomId);
+            socket.roomId = roomId;
+            socket.userId = userId;
+            socket.userName = userName;
+            emitRoomUpdate(roomId);
+            return;
+          }
         }
 
         const room = await Room.findOne({ roomId }).populate('participants', 'name photo');
@@ -116,13 +128,18 @@ module.exports = (io) => {
         }
 
         // Leave previous room if in one
-        if (socket.roomId && socket.roomId !== roomId) {
-          await removeUserFromRoom(socket.roomId, socket.userId);
-          socket.leave(socket.roomId);
-          emitRoomUpdate(socket.roomId);
-          io.to(socket.roomId).emit('userLeft', { userId: socket.userId, socketId: socket.id });
-          io.to(socket.roomId).emit('userDisconnected', { userId: socket.userId });
-          console.log(`👋 User ${socket.userId} left previous room ${socket.roomId}`);
+        if (socket.roomId && socket.roomId !== roomId && socket.userId) {
+          console.log(`🚪 User ${socket.userId} leaving previous room ${socket.roomId} to join ${roomId}`);
+          const removedUser = await removeUserFromRoom(socket.roomId, socket.userId);
+          if (removedUser) {
+            socket.leave(socket.roomId);
+            const newOwnerId = handleOwnershipTransfer(socket.roomId, socket.userId);
+            if (newOwnerId) {
+              io.to(socket.roomId).emit('ownershipTransferred', { newOwnerId });
+            }
+            emitRoomUpdate(socket.roomId);
+            io.to(socket.roomId).emit('userLeft', { userId: socket.userId, socketId: socket.id });
+          }
         }
 
         socket.join(roomId);
@@ -301,26 +318,45 @@ module.exports = (io) => {
     socket.on('disconnect', async () => {
       try {
         const { roomId, userId } = socket;
-        if (!roomId || !userId) return;
+        if (!roomId || !userId) {
+          console.log(`🔌 Client disconnected: ${socket.id} (no room/user info)`);
+          return;
+        }
 
         console.log(`🔌 Client disconnected: ${socket.id} from room ${roomId}`);
 
-        const removedUser = await removeUserFromRoom(roomId, userId);
-        if (removedUser) {
-          const sessionDuration = new Date() - removedUser.joinTime;
-          await updateUserStats(userId, sessionDuration);
+        // Add delay to prevent rapid reconnect issues
+        setTimeout(async () => {
+          try {
+            // Check if user has reconnected with different socket
+            const currentUser = roomState.users[roomId]?.find(u => u.userId === userId);
+            if (currentUser && currentUser.socketId !== socket.id) {
+              console.log(`🔄 User ${userId} has reconnected with different socket, skipping disconnect cleanup`);
+              return;
+            }
 
-          const newOwnerId = handleOwnershipTransfer(roomId, userId);
-          if (newOwnerId) {
-            io.to(roomId).emit('ownershipTransferred', { newOwnerId });
+            const removedUser = await removeUserFromRoom(roomId, userId);
+            if (removedUser) {
+              const sessionDuration = new Date() - removedUser.joinTime;
+              await updateUserStats(userId, sessionDuration);
+
+              const newOwnerId = handleOwnershipTransfer(roomId, userId);
+              if (newOwnerId) {
+                io.to(roomId).emit('ownershipTransferred', { newOwnerId });
+              }
+
+              emitRoomUpdate(roomId);
+              io.to(roomId).emit('userLeft', { userId, socketId: socket.id });
+              io.to(roomId).emit('userDisconnected', { userId });
+            }
+
+            delete roomState.sessionTimes[socket.id];
+          } catch (error) {
+            console.error('❌ Error during delayed disconnect cleanup:', error);
           }
+        }, 1000); // 1 second delay
 
-          emitRoomUpdate(roomId);
-          io.to(roomId).emit('userLeft', { userId, socketId: socket.id });
-          io.to(roomId).emit('userDisconnected', { userId });
-        }
-
-        delete roomState.sessionTimes[socket.id];
+        // Immediate cleanup
         socket.leave(roomId);
         socket.roomId = null;
         socket.userId = null;
