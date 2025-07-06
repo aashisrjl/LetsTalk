@@ -3,7 +3,6 @@ import { io, Socket } from 'socket.io-client';
 class SocketManager {
   private static instance: SocketManager;
   private socket: Socket | null = null;
-  private roomId: string | null = null;
   private isConnecting: boolean = false;
 
   constructor() {
@@ -39,10 +38,11 @@ class SocketManager {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 3,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 5000,
-      forceNew: false, // Reuse existing connection when possible
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
+      forceNew: false,
     });
 
     this.socket.on('connect', () => {
@@ -73,18 +73,12 @@ class SocketManager {
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
-      this.roomId = null;
       this.isConnecting = false;
     }
   }
 
   joinRoom(roomId: string, userId: string, userName: string, roomTitle: string) {
     if (this.socket && this.socket.connected) {
-      if (this.roomId && this.roomId !== roomId) {
-        console.log(`SocketManager: Leaving previous room ${this.roomId} before joining ${roomId}`);
-        this.leaveRoom(this.roomId, userId);
-      }
-      this.roomId = roomId;
       console.log('SocketManager: Joining room:', { roomId, userId, userName, roomTitle });
       this.socket.emit('joinRoom', { roomId, userId, userName, roomTitle });
     } else {
@@ -93,17 +87,16 @@ class SocketManager {
   }
 
   leaveRoom(roomId: string, userId: string) {
-    if (this.socket && this.socket.connected && this.roomId === roomId) {
+    if (this.socket && this.socket.connected) {
       console.log('SocketManager: Leaving room:', { roomId, userId });
       this.socket.emit('leaveRoom', { roomId, userId });
-      this.roomId = null;
     } else {
-      console.error('SocketManager: Cannot leave room: Socket not connected or wrong roomId');
+      console.error('SocketManager: Cannot leave room: Socket not connected');
     }
   }
 
   sendMessage(message: string, userName: string) {
-    if (this.socket && this.socket.connected && this.roomId) {
+    if (this.socket && this.socket.connected) {
       console.log('SocketManager: Sending message:', { message, userName });
       this.socket.emit('sendMessage', {
         message,
@@ -111,16 +104,16 @@ class SocketManager {
         time: new Date().toISOString(),
       });
     } else {
-      console.error('SocketManager: Cannot send message: Socket not connected or no room joined');
+      console.error('SocketManager: Cannot send message: Socket not connected');
     }
   }
 
   kickUser(roomId: string, userId: string) {
-    if (this.socket && this.socket.connected && this.roomId === roomId) {
+    if (this.socket && this.socket.connected) {
       console.log('SocketManager: Kicking user:', { roomId, userId });
       this.socket.emit('kickUser', { roomId, userId });
     } else {
-      console.error('SocketManager: Cannot kick user: Socket not connected or wrong roomId');
+      console.error('SocketManager: Cannot kick user: Socket not connected');
     }
   }
 
