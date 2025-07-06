@@ -34,7 +34,7 @@ const roomSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
   createdAt: { type: Date, default: Date.now }
-});
+},{ versionKey: false });
 
 // Indexes (optional for filtering)
 roomSchema.index({ language: 1 });

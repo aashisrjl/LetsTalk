@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { socketManager } from '@/utils/socket';
 import { useToast } from '@/hooks/use-toast';
@@ -25,46 +24,57 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const [users, setUsers] = useState<RoomUser[]>([]);
   const [ownerId, setOwnerId] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(socketManager.isConnected());
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
   const cleanupFunctionsRef = useRef<(() => void)[]>([]);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const hasJoinedRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
 
   const initializeConnection = useCallback(() => {
-    console.log('useRoom: Creating connection for room:', roomId);
+    if (!roomId || !userId || !userName) {
+      console.warn('useRoom: Missing required parameters, skipping initialization');
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('useRoom: Initializing connection for room:', roomId);
+    setIsLoading(true);
     
-    // Clean up any existing listeners
     cleanupFunctionsRef.current.forEach(cleanup => cleanup());
     cleanupFunctionsRef.current = [];
 
     const socket = socketManager.connect();
     
-    // Connection events
     const onConnect = () => {
       console.log('useRoom: ✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
-      
-      // Join room after connection
-      setTimeout(() => {
+      retryCountRef.current = 0;
+      if (!hasJoinedRef.current) {
         console.log('useRoom: Joining room after connection');
         socketManager.joinRoom(roomId, userId, userName, roomTitle);
-      }, 100);
+        hasJoinedRef.current = true;
+      }
     };
 
     const onDisconnect = () => {
       console.log('useRoom: ❌ Disconnected from server');
       setIsConnected(false);
+      hasJoinedRef.current = false;
       toast({
         title: 'Disconnected',
-        description: 'Lost connection to the room server.',
+        description: 'Lost connection to the room server. Attempting to reconnect...',
         variant: 'destructive',
       });
     };
 
     const onConnectError = (error: any) => {
-      console.error('useRoom: ❌ Connection error:', error.message);
+      console.error('useRoom: ❌ Connection error:', error.message, error.stack);
       setIsConnected(false);
       toast({
         title: 'Connection Error',
@@ -73,15 +83,21 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       });
     };
 
-    // Room events  
-    const roomUsersCleanup = socketManager.onRoomUsers((data) => {
+    const onRoomUsers = (data: { users: RoomUser[], ownerId: string }) => {
       console.log('useRoom: 📋 Room users updated:', data);
-      setUsers(data.users || []);
-      setOwnerId(data.ownerId || '');
-    });
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      debounceTimeout.current = setTimeout(() => {
+        setUsers(data.users || []);
+        setOwnerId(data.ownerId || '');
+        setIsLoading(false);
+      }, 200);
+    };
 
     const userJoinedCleanup = socketManager.onUserJoined((data) => {
       console.log('useRoom: 👤 User joined:', data);
+      setUsers((prev) => [...prev, data]);
       toast({
         title: 'User Joined',
         description: `${data.userName} joined the room`,
@@ -90,9 +106,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
 
     const userLeftCleanup = socketManager.onUserLeft((data) => {
       console.log('useRoom: 👋 User left:', data);
+      setUsers((prev) => prev.filter(u => u.userId !== data.userId));
       toast({
         title: 'User Left',
-        description: `User left the room`,
+        description: `${data.userName || 'User'} left the room`,
       });
     });
 
@@ -118,6 +135,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         variant: 'destructive',
       });
       navigate('/rooms');
+      hasJoinedRef.current = false;
     });
 
     const errorCleanup = socketManager.onError((data) => {
@@ -127,16 +145,28 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         description: data.message || 'An error occurred',
         variant: 'destructive',
       });
+      if (data.message === 'Room not found' && retryCountRef.current < maxRetries) {
+        console.log(`useRoom: Retrying joinRoom (attempt ${retryCountRef.current + 1})`);
+        retryCountRef.current += 1;
+        setTimeout(() => {
+          socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        }, 4000);
+      } else if (data.message === 'Room not found') {
+        console.log('useRoom: Max retries reached or room not found, redirecting to /rooms');
+        navigate('/rooms');
+        hasJoinedRef.current = false;
+      } else if (data.message === 'Not in a room') {
+        console.log('useRoom: Reattempting join due to Not in a room error');
+        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+      }
     });
 
-    // Setup socket event listeners
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
+    socket.on('roomUsers', onRoomUsers);
 
-    // Store cleanup functions
     cleanupFunctionsRef.current = [
-      roomUsersCleanup,
       userJoinedCleanup,
       userLeftCleanup,
       messageCleanup,
@@ -145,9 +175,15 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       errorCleanup,
       () => socket.off('connect', onConnect),
       () => socket.off('disconnect', onDisconnect),
-      () => socket.off('connect_error', onConnectError)
+      () => socket.off('connect_error', onConnectError),
+      () => socket.off('roomUsers', onRoomUsers)
     ];
 
+    if (socketManager.isConnected() && !hasJoinedRef.current) {
+      console.log('useRoom: Initial socket connection detected, joining room');
+      socketManager.joinRoom(roomId, userId, userName, roomTitle);
+      hasJoinedRef.current = true;
+    }
   }, [roomId, userId, userName, roomTitle, toast, navigate]);
 
   const sendMessage = useCallback(
@@ -155,42 +191,45 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Sending message:', message);
       if (!isConnected) {
         console.warn('useRoom: Cannot send message: not connected');
+        toast({
+          title: 'Error',
+          description: 'Cannot send message: not connected to the server',
+          variant: 'destructive',
+        });
         return;
       }
       socketManager.sendMessage(message, userName);
     },
-    [userName, isConnected]
+    [userName, isConnected, toast]
   );
 
   const kickUser = useCallback(
     (targetUserId: string) => {
       console.log('useRoom: Kicking user:', targetUserId);
+      if (!isConnected) {
+        console.warn('useRoom: Cannot kick user: not connected');
+        toast({
+          title: 'Error',
+          description: 'Cannot kick user: not connected to the server',
+          variant: 'destructive',
+        });
+        return;
+      }
       socketManager.kickUser(roomId, targetUserId);
     },
-    [roomId]
+    [roomId, isConnected, toast]
   );
 
-  // Initialize once on mount
   useEffect(() => {
-    if (!roomId || !userId || !userName) {
-      console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
-      return;
-    }
-
     initializeConnection();
-  }, [initializeConnection]);
-
-  // Cleanup on unmount or room change
-  useEffect(() => {
     return () => {
       console.log('useRoom: Component unmounting, leaving room...');
-      // Clean up listeners
       cleanupFunctionsRef.current.forEach(cleanup => cleanup());
       cleanupFunctionsRef.current = [];
-      // Leave room
       socketManager.leaveRoom(roomId, userId);
+      hasJoinedRef.current = false;
     };
-  }, [roomId, userId]);
+  }, [initializeConnection]);
 
   return {
     users,
@@ -200,5 +239,6 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     sendMessage,
     kickUser,
     isOwner: ownerId === userId,
+    isLoading,
   };
 };

@@ -63,6 +63,7 @@ app.use((req, res) => {
 const io = socketIO(server, {
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    methods: ['GET', 'POST'],
     credentials: true,
   },
 });

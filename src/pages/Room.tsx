@@ -1,5 +1,4 @@
-
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -33,10 +32,9 @@ const fetchRoomData = async (roomId: string) => {
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { user: userData, isLoading, isAuthenticated } = useAuth();
+  const { user: userData, isLoading: authLoading, isAuthenticated } = useAuth();
 
-  // Early returns BEFORE hooks to prevent mount/unmount cycles
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen text-slate-100">
         Loading...
@@ -54,64 +52,44 @@ const Room = () => {
     return <Navigate to="/rooms" replace />;
   }
 
-  // Use simple stable user data - no memoization to prevent re-renders
   const stableUserData = {
     id: userData.id,
     name: userData.name,
-    photo: userData.photo
+    photo: userData.photo,
   };
 
-  return <RoomContent 
-    roomId={roomId} 
-    stableUserData={stableUserData} 
-    isAuthenticated={isAuthenticated}
-  />;
+  return <RoomContent roomId={roomId} stableUserData={stableUserData} isAuthenticated={isAuthenticated} />;
 };
 
-// Separate component to contain all the hooks and state
 const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
   roomId: string;
   stableUserData: { id: string; name: string; photo?: string };
   isAuthenticated: boolean;
 }) => {
   const navigate = useNavigate();
-
-  // State for SidePanel toggle on small screens
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [messageInput, setMessageInput] = useState('');
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
-    queryFn: () => fetchRoomData(roomId!),
-    enabled: !!roomId && !!stableUserData?.id && isAuthenticated,
+    queryFn: () => fetchRoomData(roomId),
+    enabled: !!roomId && !!stableUserData.id && isAuthenticated,
+    retry: 1,
   });
 
-  // Stabilize roomTitle to prevent useRoom re-initializations
-  const stableRoomTitle = useMemo(() => {
-    return roomData?.title || 'Language Room';
-  }, [roomData?.title]);
+  const stableRoomTitle = useMemo(() => roomData?.title || 'Language Room', [roomData?.title]);
 
-  // Room loading check after room query
-  if (isRoomLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading room...
-      </div>
-    );
-  }
-
-  if (roomError) {
-    console.error('Room fetch error:', roomError.message);
-    navigate('/rooms');
-    return null;
-  }
-
-  // Hooks called only when all conditions are met
-  const { users, ownerId, messages, isConnected, sendMessage, kickUser, isOwner } = useRoom(
-    roomId,
-    stableUserData.id,
-    stableUserData.name,
-    stableRoomTitle
-  );
+  const {
+    users,
+    ownerId,
+    messages,
+    isConnected,
+    sendMessage,
+    kickUser,
+    isOwner,
+    isLoading: roomLoading,
+  } = useRoom(roomId, stableUserData.id, stableUserData.name, stableRoomTitle);
 
   const {
     localStream,
@@ -125,7 +103,34 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
     streamError,
   } = useWebRTC(roomId, stableUserData.id, isConnected);
 
-  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isRoomLoading:', isRoomLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', stableRoomTitle);
+  useEffect(() => {
+    if (!hasInitialized && !isRoomLoading && !roomLoading && isConnected) {
+      setHasInitialized(true);
+      console.log('RoomContent: Initialized with room data');
+    }
+  }, [hasInitialized, isRoomLoading, roomLoading, isConnected]);
+
+  if (isRoomLoading || roomLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-slate-100">
+        Loading room...
+      </div>
+    );
+  }
+
+  if (roomError) {
+    console.error('Room fetch error:', roomError.message);
+    navigate('/rooms');
+    return null;
+  }
+
+  if (!isConnected && hasInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen text-slate-100">
+        Reconnecting to room...
+      </div>
+    );
+  }
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,9 +151,7 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 font-sans relative overflow-hidden">
       <Toaster />
-      {/* Main content */}
       <div className="flex-1 flex flex-col relative">
-        {/* Hamburger menu for small screens */}
         <Button
           variant="ghost"
           size="icon"
@@ -158,8 +161,6 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
         >
           {isSidePanelOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
-
-        {/* Media controls */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row gap-2">
           <MediaControls
             isAudioEnabled={isAudioEnabled}
@@ -173,8 +174,6 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
             onLeaveRoom={handleLeaveRoom}
           />
         </div>
-
-        {/* Video grid */}
         <div className="flex-1 flex items-center justify-center w-full h-full">
           <VideoGrid
             localStream={localStream}
@@ -185,9 +184,12 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
             localUserId={stableUserData.id}
           />
         </div>
+        {streamError && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-500 text-white p-2 rounded z-30">
+            {streamError}
+          </div>
+        )}
       </div>
-
-      {/* SidePanel for large screens, hidden by default on small screens */}
       <div
         className={`fixed md:static inset-y-0 right-0 w-[300px] sm:w-[350px] bg-slate-800/50 border-l border-slate-700 transform transition-transform duration-300 ease-in-out z-40
           ${isSidePanelOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
@@ -203,13 +205,10 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
           currentUserId={stableUserData.id}
           isOwner={isOwner}
           onKickUser={kickUser}
-          // onViewProfile={(userId) => console.log('View profile:', userId)}
           isConnected={isConnected}
           roomData={roomData}
         />
       </div>
-
-      {/* Backdrop for small screens when SidePanel is open */}
       {isSidePanelOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 md:hidden"

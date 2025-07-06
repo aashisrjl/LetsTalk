@@ -1,28 +1,43 @@
 import { io, Socket } from 'socket.io-client';
 
+interface CustomSocket extends Socket {
+  roomId?: string;
+  userId?: string;
+  userName?: string;
+}
+
 class SocketManager {
   private static instance: SocketManager;
-  private socket: Socket | null = null;
+  private socket: CustomSocket | null = null;
   private isConnecting: boolean = false;
+  private isJoining: boolean = false;
+  private lastJoinRoomParams: { roomId: string; userId: string; userName: string; roomTitle: string } | null = null;
+  private reconnectDelay: number = 4000;
 
-  constructor() {
+  private constructor() {
     if (SocketManager.instance) {
       return SocketManager.instance;
     }
     SocketManager.instance = this;
   }
 
-  connect() {
+  static getInstance(): SocketManager {
+    if (!SocketManager.instance) {
+      SocketManager.instance = new SocketManager();
+    }
+    return SocketManager.instance;
+  }
+
+  connect(): CustomSocket {
     if (this.isConnecting) {
       console.log('SocketManager: Connection in progress, returning existing socket');
-      return this.socket;
+      return this.socket as CustomSocket;
     }
     if (this.socket && this.socket.connected) {
       console.log('SocketManager: Already connected, socket ID:', this.socket.id);
       return this.socket;
     }
     
-    // Clean up disconnected socket
     if (this.socket && !this.socket.connected) {
       console.log('SocketManager: Cleaning up disconnected socket');
       this.socket.removeAllListeners();
@@ -38,26 +53,47 @@ class SocketManager {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 10000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: this.reconnectDelay,
+      reconnectionDelayMax: 20000,
+      timeout: 25000,
       forceNew: false,
-    });
+    }) as CustomSocket;
 
     this.socket.on('connect', () => {
       this.isConnecting = false;
       console.log('SocketManager: Connected to server, socket ID:', this.socket?.id);
+      if (this.lastJoinRoomParams && !this.isJoining) {
+        this.joinRoom(
+          this.lastJoinRoomParams.roomId,
+          this.lastJoinRoomParams.userId,
+          this.lastJoinRoomParams.userName,
+          this.lastJoinRoomParams.roomTitle
+        );
+      }
     });
 
     this.socket.on('connect_error', (err) => {
       this.isConnecting = false;
-      console.error('SocketManager: Connection error:', err.message);
+      console.error('SocketManager: Connection error:', err.message, err.stack);
     });
 
     this.socket.on('disconnect', (reason) => {
       this.isConnecting = false;
+      this.isJoining = false;
       console.log('SocketManager: Disconnected:', reason);
+    });
+
+    this.socket.on('reconnect', (attempt) => {
+      console.log(`SocketManager: Reconnected after attempt ${attempt}, socket ID: ${this.socket?.id}`);
+      if (this.lastJoinRoomParams && !this.isJoining) {
+        this.joinRoom(
+          this.lastJoinRoomParams.roomId,
+          this.lastJoinRoomParams.userId,
+          this.lastJoinRoomParams.userName,
+          this.lastJoinRoomParams.roomTitle
+        );
+      }
     });
 
     this.socket.on('error', (err) => {
@@ -74,15 +110,34 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
       this.isConnecting = false;
+      this.isJoining = false;
+      this.lastJoinRoomParams = null;
     }
   }
 
+  isConnected() {
+    return this.socket?.connected || false;
+  }
+
   joinRoom(roomId: string, userId: string, userName: string, roomTitle: string) {
-    if (this.socket && this.socket.connected) {
+    if (this.isJoining || !this.socket) {
+      console.log('SocketManager: Join in progress or no socket, skipping:', { roomId, userId });
+      return;
+    }
+    if (this.socket.connected) {
+      this.isJoining = true;
       console.log('SocketManager: Joining room:', { roomId, userId, userName, roomTitle });
       this.socket.emit('joinRoom', { roomId, userId, userName, roomTitle });
+      this.socket.roomId = roomId;
+      this.socket.userId = userId;
+      this.socket.userName = userName;
+      this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
+      this.socket.once('roomUsers', () => {
+        this.isJoining = false;
+      });
     } else {
       console.error('SocketManager: Cannot join room: Socket not connected');
+      this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
     }
   }
 
@@ -90,34 +145,34 @@ class SocketManager {
     if (this.socket && this.socket.connected) {
       console.log('SocketManager: Leaving room:', { roomId, userId });
       this.socket.emit('leaveRoom', { roomId, userId });
+      delete this.socket.roomId;
+      delete this.socket.userId;
+      delete this.socket.userName;
+      this.lastJoinRoomParams = null;
+      this.isJoining = false;
     } else {
       console.error('SocketManager: Cannot leave room: Socket not connected');
     }
   }
 
   sendMessage(message: string, userName: string) {
-    if (this.socket && this.socket.connected) {
-      console.log('SocketManager: Sending message:', { message, userName });
-      this.socket.emit('sendMessage', {
-        message,
-        userName,
-        time: new Date().toISOString(),
-      });
+    if (this.socket && this.socket.connected && this.socket.roomId) {
+      console.log('SocketManager: Sending message:', { message, userName, roomId: this.socket.roomId });
+      this.socket.emit('sendMessage', { message, userName, time: new Date().toISOString() });
     } else {
-      console.error('SocketManager: Cannot send message: Socket not connected');
+      console.error('SocketManager: Cannot send message: Socket not connected or no roomId');
     }
   }
 
   kickUser(roomId: string, userId: string) {
-    if (this.socket && this.socket.connected) {
+    if (this.socket && this.socket.connected && this.socket.roomId === roomId) {
       console.log('SocketManager: Kicking user:', { roomId, userId });
       this.socket.emit('kickUser', { roomId, userId });
     } else {
-      console.error('SocketManager: Cannot kick user: Socket not connected');
+      console.error('SocketManager: Cannot kick user: not connected or wrong room');
     }
   }
 
-  // Listener methods with cleanup
   onRoomUsers(callback: (data: any) => void) {
     if (this.socket) {
       const handler = (data: any) => {
@@ -126,6 +181,30 @@ class SocketManager {
       };
       this.socket.on('roomUsers', handler);
       return () => this.socket?.off('roomUsers', handler);
+    }
+    return () => {};
+  }
+
+  onUserConnected(callback: (data: { userId: string; socketId: string }) => void) {
+    if (this.socket) {
+      const handler = (data: { userId: string; socketId: string }) => {
+        console.log('SocketManager: Received userConnected:', data);
+        callback(data);
+      };
+      this.socket.on('userConnected', handler);
+      return () => this.socket?.off('userConnected', handler);
+    }
+    return () => {};
+  }
+
+  onUserDisconnected(callback: (data: { userId: string }) => void) {
+    if (this.socket) {
+      const handler = (data: { userId: string }) => {
+        console.log('SocketManager: Received userDisconnected:', data);
+        callback(data);
+      };
+      this.socket.on('userDisconnected', handler);
+      return () => this.socket?.off('userDisconnected', handler);
     }
     return () => {};
   }
@@ -211,8 +290,8 @@ class SocketManager {
 
   getSocket() {
     console.log('SocketManager: Getting socket:', this.socket?.connected ? 'Connected' : 'Not connected');
-    return this.socket;
+    return this.socket as CustomSocket;
   }
 }
 
-export const socketManager = new SocketManager();
+export const socketManager = SocketManager.getInstance();
