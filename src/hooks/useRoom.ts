@@ -21,6 +21,17 @@ interface ChatMessage {
   time: string;
 }
 
+// Singleton connection manager to prevent multiple instances
+let globalRoomConnection: {
+  socket: any;
+  roomId: string | null;
+  users: RoomUser[];
+  ownerId: string;
+  messages: ChatMessage[];
+  isConnected: boolean;
+  listeners: (() => void)[];
+} | null = null;
+
 export const useRoom = (roomId: string, userId: string, userName: string, roomTitle: string) => {
   const [users, setUsers] = useState<RoomUser[]>([]);
   const [ownerId, setOwnerId] = useState<string>('');
@@ -28,55 +39,63 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isInitialized = useRef(false);
-  const hasJoinedRoom = useRef(false);
-  const cleanupListeners = useRef<(() => void)[]>([]);
-  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
 
-  const connectToRoom = useCallback(() => {
-    if (isInitialized.current) {
-      console.log('useRoom: Already initialized, skipping connection');
+  const initializeConnection = useCallback(() => {
+    if (globalRoomConnection && globalRoomConnection.roomId === roomId) {
+      console.log('useRoom: Using existing connection');
+      setUsers(globalRoomConnection.users);
+      setOwnerId(globalRoomConnection.ownerId);
+      setMessages(globalRoomConnection.messages);
+      setIsConnected(globalRoomConnection.isConnected);
       return;
     }
 
-    console.log('useRoom: Connecting to room...');
-    isInitialized.current = true;
-    const socket = socketManager.connect();
-
-    // Clear any existing timeout
-    if (connectionTimeoutRef.current) {
-      clearTimeout(connectionTimeoutRef.current);
+    console.log('useRoom: Creating new connection');
+    
+    // Clean up existing connection if different room
+    if (globalRoomConnection) {
+      console.log('useRoom: Cleaning up previous connection');
+      globalRoomConnection.listeners.forEach(cleanup => cleanup());
+      if (globalRoomConnection.socket) {
+        socketManager.disconnect();
+      }
     }
 
-    connectionTimeoutRef.current = setTimeout(() => {
-      if (!socket.connected) {
-        console.warn('useRoom: ⏰ Connection timeout');
-        toast({
-          title: 'Connection Timeout',
-          description: 'Failed to connect to the room. Please check your network or try again.',
-          variant: 'destructive',
-        });
-        setIsConnected(false);
-        isInitialized.current = false;
-        hasJoinedRoom.current = false;
-      }
-    }, 10000);
+    const socket = socketManager.connect();
+    
+    globalRoomConnection = {
+      socket,
+      roomId,
+      users: [],
+      ownerId: '',
+      messages: [],
+      isConnected: false,
+      listeners: []
+    };
 
+    // Connection events
     socket.on('connect', () => {
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-      }
       console.log('useRoom: ✅ Connected to server, socket ID:', socket.id);
-      setIsConnected(true);
+      if (globalRoomConnection) {
+        globalRoomConnection.isConnected = true;
+        setIsConnected(true);
+        
+        // Auto-join room on connection
+        setTimeout(() => {
+          console.log('useRoom: Auto-joining room after connection');
+          socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        }, 100);
+      }
     });
 
     socket.on('disconnect', () => {
       console.log('useRoom: ❌ Disconnected from server');
-      setIsConnected(false);
-      isInitialized.current = false;
-      hasJoinedRoom.current = false;
+      if (globalRoomConnection) {
+        globalRoomConnection.isConnected = false;
+        setIsConnected(false);
+      }
       toast({
         title: 'Disconnected',
         description: 'Lost connection to the room server.',
@@ -86,9 +105,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
 
     socket.on('connect_error', (error) => {
       console.error('useRoom: ❌ Connection error:', error.message);
-      setIsConnected(false);
-      isInitialized.current = false;
-      hasJoinedRoom.current = false;
+      if (globalRoomConnection) {
+        globalRoomConnection.isConnected = false;
+        setIsConnected(false);
+      }
       toast({
         title: 'Connection Error',
         description: `Failed to connect to the room server: ${error.message}`,
@@ -96,44 +116,54 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       });
     });
 
-    // Set up event listeners
-    cleanupListeners.current.push(socketManager.onRoomUsers((data) => {
+    // Room events
+    const roomUsersCleanup = socketManager.onRoomUsers((data) => {
       console.log('useRoom: 📋 Room users updated:', data);
+      if (globalRoomConnection) {
+        globalRoomConnection.users = data.users || [];
+        globalRoomConnection.ownerId = data.ownerId || '';
+      }
       setUsers(data.users || []);
       setOwnerId(data.ownerId || '');
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onUserJoined((data) => {
+    const userJoinedCleanup = socketManager.onUserJoined((data) => {
       console.log('useRoom: 👤 User joined:', data);
       toast({
         title: 'User Joined',
         description: `${data.userName} joined the room`,
       });
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onUserLeft((data) => {
+    const userLeftCleanup = socketManager.onUserLeft((data) => {
       console.log('useRoom: 👋 User left:', data);
       toast({
         title: 'User Left',
         description: `User left the room`,
       });
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onReceiveMessage((data) => {
+    const messageCleanup = socketManager.onReceiveMessage((data) => {
       console.log('useRoom: 💬 Message received:', data);
+      if (globalRoomConnection) {
+        globalRoomConnection.messages.push(data);
+      }
       setMessages((prev) => [...prev, data]);
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onOwnershipTransferred((data) => {
+    const ownershipCleanup = socketManager.onOwnershipTransferred((data) => {
       console.log('useRoom: 👑 Ownership transferred:', data);
+      if (globalRoomConnection) {
+        globalRoomConnection.ownerId = data.newOwnerId;
+      }
       setOwnerId(data.newOwnerId);
       toast({
         title: 'Ownership Transferred',
         description: 'Room ownership has been transferred',
       });
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onKicked((data) => {
+    const kickedCleanup = socketManager.onKicked((data) => {
       console.log('useRoom: 🚫 Kicked from room:', data);
       toast({
         title: 'Kicked from Room',
@@ -141,61 +171,29 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         variant: 'destructive',
       });
       navigate('/rooms');
-    }));
+    });
 
-    cleanupListeners.current.push(socketManager.onError((data) => {
+    const errorCleanup = socketManager.onError((data) => {
       console.error('useRoom: ❌ Socket error:', data);
       toast({
         title: 'Error',
         description: data.message || 'An error occurred',
         variant: 'destructive',
       });
-    }));
-  }, []);
+    });
 
-  const joinRoom = useCallback(() => {
-    if (!isConnected) {
-      console.log('useRoom: Not connected, cannot join room');
-      return;
-    }
-    if (hasJoinedRoom.current) {
-      console.log('useRoom: Already joined room, skipping');
-      return;
-    }
-    
-    console.log('useRoom: Joining room with data:', { roomId, userId, userName, roomTitle });
-    hasJoinedRoom.current = true;
-    socketManager.joinRoom(roomId, userId, userName, roomTitle);
-  }, [roomId, userId, userName, roomTitle, isConnected]);
+    // Store cleanup functions
+    globalRoomConnection.listeners = [
+      roomUsersCleanup,
+      userJoinedCleanup,
+      userLeftCleanup,
+      messageCleanup,
+      ownershipCleanup,
+      kickedCleanup,
+      errorCleanup
+    ];
 
-  const disconnectFromRoom = useCallback(() => {
-    if (!isInitialized.current) {
-      console.log('useRoom: Not initialized, skipping disconnect');
-      return;
-    }
-    
-    console.log('useRoom: Disconnecting from room...');
-    
-    // Clear timeout
-    if (connectionTimeoutRef.current) {
-      clearTimeout(connectionTimeoutRef.current);
-    }
-    
-    // Clean up listeners
-    cleanupListeners.current.forEach((cleanup) => cleanup());
-    cleanupListeners.current = [];
-    
-    // Leave room and disconnect
-    if (roomId && userId) {
-      socketManager.leaveRoom(roomId, userId);
-    }
-    socketManager.disconnect();
-    
-    // Reset state
-    setIsConnected(false);
-    isInitialized.current = false;
-    hasJoinedRoom.current = false;
-  }, [roomId, userId]);
+  }, [roomId, userId, userName, roomTitle, toast, navigate]);
 
   const sendMessage = useCallback(
     (message: string) => {
@@ -217,35 +215,25 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     [roomId]
   );
 
-  // Initialize connection only once - prevent re-initialization loops
+  // Initialize once on mount
   useEffect(() => {
     if (!roomId || !userId || !userName) {
       console.warn('useRoom: Missing required parameters:', { roomId, userId, userName });
       return;
     }
 
-    // Only initialize if not already initialized
-    if (!isInitialized.current) {
-      connectToRoom();
-    }
-    
-    // No cleanup here - let component unmount handle it
-  }, [roomId, userId, userName]); // Stable dependencies
+    initializeConnection();
+  }, [initializeConnection]);
 
-  // Join room when connected - only once
-  useEffect(() => {
-    if (isConnected && roomId && userId && userName && !hasJoinedRoom.current) {
-      joinRoom();
-    }
-  }, [isConnected, roomId, userId, userName, joinRoom]); // Include necessary dependencies
-
-  // Cleanup only on component unmount
+  // Cleanup on unmount or room change
   useEffect(() => {
     return () => {
-      console.log('useRoom: Component unmounting - cleaning up room connection...');
-      disconnectFromRoom();
+      console.log('useRoom: Component unmounting, leaving room...');
+      if (globalRoomConnection && globalRoomConnection.roomId === roomId) {
+        socketManager.leaveRoom(roomId, userId);
+      }
     };
-  }, []); // Empty dependencies - only runs on mount/unmount
+  }, [roomId, userId]);
 
   return {
     users,

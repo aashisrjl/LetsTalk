@@ -1,9 +1,17 @@
 import { io, Socket } from 'socket.io-client';
 
 class SocketManager {
+  private static instance: SocketManager;
   private socket: Socket | null = null;
   private roomId: string | null = null;
   private isConnecting: boolean = false;
+
+  constructor() {
+    if (SocketManager.instance) {
+      return SocketManager.instance;
+    }
+    SocketManager.instance = this;
+  }
 
   connect() {
     if (this.isConnecting) {
@@ -15,7 +23,7 @@ class SocketManager {
       return this.socket;
     }
     
-    // If socket exists but not connected, clean it up first
+    // Clean up disconnected socket
     if (this.socket && !this.socket.connected) {
       console.log('SocketManager: Cleaning up disconnected socket');
       this.socket.removeAllListeners();
@@ -26,11 +34,15 @@ class SocketManager {
     this.isConnecting = true;
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     console.log(`SocketManager: Initializing socket connection to ${backendUrl}`);
+    
     this.socket = io(backendUrl, {
       withCredentials: true,
       autoConnect: true,
-      reconnection: false, // Disable reconnection to prevent duplicates
-      forceNew: true, // Force new connection to prevent conflicts
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000,
+      timeout: 5000,
+      forceNew: false, // Reuse existing connection when possible
     });
 
     this.socket.on('connect', () => {
@@ -41,6 +53,11 @@ class SocketManager {
     this.socket.on('connect_error', (err) => {
       this.isConnecting = false;
       console.error('SocketManager: Connection error:', err.message);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      this.isConnecting = false;
+      console.log('SocketManager: Disconnected:', reason);
     });
 
     this.socket.on('error', (err) => {

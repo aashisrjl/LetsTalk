@@ -35,16 +35,6 @@ const Room = () => {
   const navigate = useNavigate();
   const { user: userData, isLoading, isAuthenticated } = useAuth();
 
-  // Memoize user data to prevent unnecessary re-renders
-  const stableUserData = useMemo(() => {
-    if (!userData?.id || !userData?.name) return null;
-    return { 
-      id: userData.id, 
-      name: userData.name, 
-      photo: userData.photo 
-    };
-  }, [userData?.id, userData?.name, userData?.photo]);
-
   // Early returns BEFORE hooks to prevent mount/unmount cycles
   if (isLoading) {
     return (
@@ -54,8 +44,8 @@ const Room = () => {
     );
   }
 
-  if (!stableUserData || !isAuthenticated) {
-    console.warn('Redirecting to login: Invalid userData or not authenticated', stableUserData);
+  if (!isAuthenticated || !userData?.id || !userData?.name) {
+    console.warn('Redirecting to login: Invalid userData or not authenticated');
     return <Navigate to="/login" replace />;
   }
 
@@ -63,6 +53,13 @@ const Room = () => {
     console.warn('Redirecting to rooms: Missing roomId');
     return <Navigate to="/rooms" replace />;
   }
+
+  // Use simple stable user data - no memoization to prevent re-renders
+  const stableUserData = {
+    id: userData.id,
+    name: userData.name,
+    photo: userData.photo
+  };
 
   return <RoomContent 
     roomId={roomId} 

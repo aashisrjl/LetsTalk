@@ -95,30 +95,11 @@ module.exports = (io) => {
 
     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
       try {
-        // Prevent multiple joins from same socket
+        // Prevent multiple joins from same user/socket combination
         if (socket.roomId === roomId && socket.userId === userId) {
-          console.log(`🔄 User ${userId} already in room ${roomId} on this socket, skipping`);
+          console.log(`🔄 User ${userId} already in room ${roomId} on this socket, emitting current state`);
           emitRoomUpdate(roomId);
           return;
-        }
-
-        // Check if user is already in the room from another socket
-        const existingUser = roomState.users[roomId]?.find(u => u.userId === userId);
-        if (existingUser) {
-          if (existingUser.socketId === socket.id) {
-            console.log(`🔄 User ${userId} already in room ${roomId} with same socket, skipping`);
-            emitRoomUpdate(roomId);
-            return;
-          } else {
-            console.log(`🔄 User ${userId} switching socket in room ${roomId}, updating socketId`);
-            existingUser.socketId = socket.id;
-            socket.join(roomId);
-            socket.roomId = roomId;
-            socket.userId = userId;
-            socket.userName = userName;
-            emitRoomUpdate(roomId);
-            return;
-          }
         }
 
         const room = await Room.findOne({ roomId }).populate('participants', 'name photo');
@@ -127,9 +108,9 @@ module.exports = (io) => {
           return;
         }
 
-        // Leave previous room if in one
+        // Clean up any previous room assignment for this socket
         if (socket.roomId && socket.roomId !== roomId && socket.userId) {
-          console.log(`🚪 User ${socket.userId} leaving previous room ${socket.roomId} to join ${roomId}`);
+          console.log(`🚪 Socket switching from room ${socket.roomId} to ${roomId}`);
           const removedUser = await removeUserFromRoom(socket.roomId, socket.userId);
           if (removedUser) {
             socket.leave(socket.roomId);
@@ -142,11 +123,26 @@ module.exports = (io) => {
           }
         }
 
+        // Check if user is already in target room from another socket
+        const existingUser = roomState.users[roomId]?.find(u => u.userId === userId);
+        if (existingUser && existingUser.socketId !== socket.id) {
+          console.log(`🔄 User ${userId} switching socket in room ${roomId}, updating socketId from ${existingUser.socketId} to ${socket.id}`);
+          existingUser.socketId = socket.id;
+          socket.join(roomId);
+          socket.roomId = roomId;
+          socket.userId = userId;
+          socket.userName = userName;
+          emitRoomUpdate(roomId);
+          return;
+        }
+
+        // Proceed with normal join process
         socket.join(roomId);
         socket.roomId = roomId;
         socket.userId = userId;
         socket.userName = userName;
 
+        // Set room owner if not set
         if (!roomState.owners[roomId]) {
           roomState.owners[roomId] = userId;
           await Room.findOneAndUpdate(
@@ -325,7 +321,7 @@ module.exports = (io) => {
 
         console.log(`🔌 Client disconnected: ${socket.id} from room ${roomId}`);
 
-        // Add delay to prevent rapid reconnect issues
+        // Add shorter delay to prevent rapid reconnect issues
         setTimeout(async () => {
           try {
             // Check if user has reconnected with different socket
@@ -354,7 +350,7 @@ module.exports = (io) => {
           } catch (error) {
             console.error('❌ Error during delayed disconnect cleanup:', error);
           }
-        }, 1000); // 1 second delay
+        }, 500); // Reduced to 500ms delay
 
         // Immediate cleanup
         socket.leave(roomId);
