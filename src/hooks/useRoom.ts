@@ -229,18 +229,23 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       connectToRoom();
     }
     
-    return () => {
-      console.log('useRoom: Cleaning up room connection...');
-      disconnectFromRoom();
-    };
-  }, []); // No dependencies to prevent re-initialization
+    // No cleanup here - let component unmount handle it
+  }, [roomId, userId, userName]); // Stable dependencies
 
   // Join room when connected - only once
   useEffect(() => {
     if (isConnected && roomId && userId && userName && !hasJoinedRoom.current) {
       joinRoom();
     }
-  }, [isConnected]); // Only depend on connection state
+  }, [isConnected, roomId, userId, userName, joinRoom]); // Include necessary dependencies
+
+  // Cleanup only on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('useRoom: Component unmounting - cleaning up room connection...');
+      disconnectFromRoom();
+    };
+  }, []); // Empty dependencies - only runs on mount/unmount
 
   return {
     users,

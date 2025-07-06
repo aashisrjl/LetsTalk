@@ -14,6 +14,15 @@ class SocketManager {
       console.log('SocketManager: Already connected, socket ID:', this.socket.id);
       return this.socket;
     }
+    
+    // If socket exists but not connected, clean it up first
+    if (this.socket && !this.socket.connected) {
+      console.log('SocketManager: Cleaning up disconnected socket');
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    
     this.isConnecting = true;
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     console.log(`SocketManager: Initializing socket connection to ${backendUrl}`);
@@ -21,6 +30,7 @@ class SocketManager {
       withCredentials: true,
       autoConnect: true,
       reconnection: false, // Disable reconnection to prevent duplicates
+      forceNew: true, // Force new connection to prevent conflicts
     });
 
     this.socket.on('connect', () => {

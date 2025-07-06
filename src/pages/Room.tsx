@@ -35,13 +35,15 @@ const Room = () => {
   const navigate = useNavigate();
   const { user: userData, isLoading, isAuthenticated } = useAuth();
 
-  // State for SidePanel toggle on small screens
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-
-  const stableUserData = useMemo(
-    () => (userData ? { id: userData.id, name: userData.name, photo: userData.photo } : null),
-    [userData?.id, userData?.name, userData?.photo]
-  );
+  // Memoize user data to prevent unnecessary re-renders
+  const stableUserData = useMemo(() => {
+    if (!userData?.id || !userData?.name) return null;
+    return { 
+      id: userData.id, 
+      name: userData.name, 
+      photo: userData.photo 
+    };
+  }, [userData?.id, userData?.name, userData?.photo]);
 
   // Early returns BEFORE hooks to prevent mount/unmount cycles
   if (isLoading) {
@@ -52,7 +54,7 @@ const Room = () => {
     );
   }
 
-  if (!stableUserData || !stableUserData.id || !stableUserData.name || !isAuthenticated) {
+  if (!stableUserData || !isAuthenticated) {
     console.warn('Redirecting to login: Invalid userData or not authenticated', stableUserData);
     return <Navigate to="/login" replace />;
   }
@@ -62,6 +64,23 @@ const Room = () => {
     return <Navigate to="/rooms" replace />;
   }
 
+  return <RoomContent 
+    roomId={roomId} 
+    stableUserData={stableUserData} 
+    isAuthenticated={isAuthenticated}
+  />;
+};
+
+// Separate component to contain all the hooks and state
+const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
+  roomId: string;
+  stableUserData: { id: string; name: string; photo?: string };
+  isAuthenticated: boolean;
+}) => {
+  const navigate = useNavigate();
+
+  // State for SidePanel toggle on small screens
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
@@ -109,7 +128,7 @@ const Room = () => {
     streamError,
   } = useWebRTC(roomId, stableUserData.id, isConnected);
 
-  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', stableRoomTitle);
+  console.log('Room.tsx - roomId:', roomId, 'stableUserData:', stableUserData, 'isRoomLoading:', isRoomLoading, 'isAuthenticated:', isAuthenticated, 'roomTitle:', stableRoomTitle);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
