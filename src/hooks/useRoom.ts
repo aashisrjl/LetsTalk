@@ -92,6 +92,9 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         setUsers(data.users || []);
         setOwnerId(data.ownerId || '');
         setIsLoading(false);
+        
+        // Log current room state for debugging
+        console.log(`📊 Room ${roomId} state: ${data.users?.length || 0} users, owner: ${data.ownerId}`);
       }, 200);
     };
 
@@ -181,8 +184,11 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
 
     if (socketManager.isConnected() && !hasJoinedRef.current) {
       console.log('useRoom: Initial socket connection detected, joining room');
-      socketManager.joinRoom(roomId, userId, userName, roomTitle);
       hasJoinedRef.current = true;
+      // Small delay to ensure socket is fully ready
+      setTimeout(() => {
+        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+      }, 100);
     }
   }, [roomId, userId, userName, roomTitle, toast, navigate]);
 

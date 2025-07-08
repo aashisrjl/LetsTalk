@@ -132,9 +132,16 @@ class SocketManager {
       this.socket.userId = userId;
       this.socket.userName = userName;
       this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
-      this.socket.once('roomUsers', () => {
+      
+      // Set up multiple fallbacks to clear joining state
+      const clearJoining = () => {
         this.isJoining = false;
-      });
+        console.log('SocketManager: Cleared joining state for room:', roomId);
+      };
+      
+      this.socket.once('roomUsers', clearJoining);
+      this.socket.once('error', clearJoining);
+      setTimeout(clearJoining, 10000); // Fallback timeout
     } else {
       console.error('SocketManager: Cannot join room: Socket not connected');
       this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
@@ -156,11 +163,17 @@ class SocketManager {
   }
 
   sendMessage(message: string, userName: string) {
-    if (this.socket && this.socket.connected && this.socket.roomId) {
-      console.log('SocketManager: Sending message:', { message, userName, roomId: this.socket.roomId });
+    if (this.socket && this.socket.connected) {
+      const roomId = this.socket.roomId || this.lastJoinRoomParams?.roomId;
+      console.log('SocketManager: Sending message:', { message, userName, roomId, socketConnected: this.socket.connected });
       this.socket.emit('sendMessage', { message, userName, time: new Date().toISOString() });
     } else {
-      console.error('SocketManager: Cannot send message: Socket not connected or no roomId');
+      console.error('SocketManager: Cannot send message: Socket not connected', { 
+        hasSocket: !!this.socket, 
+        connected: this.socket?.connected,
+        roomId: this.socket?.roomId,
+        lastParams: this.lastJoinRoomParams
+      });
     }
   }
 
