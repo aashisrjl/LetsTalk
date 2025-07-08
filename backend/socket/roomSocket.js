@@ -422,6 +422,13 @@ module.exports = (io) => {
         socket.userName = userName;
         roomState.socketData[socket.id] = { roomId, userId, userName };
         
+        console.log(`🔌 Socket ${socket.id} state after joining:`, {
+          roomId: socket.roomId,
+          userId: socket.userId,
+          userName: socket.userName,
+          inRoom: socket.rooms.has(roomId)
+        });
+        
         console.log(`✅ Socket ${socket.id} joined room ${roomId} as user ${userId} (${userName})`);
 
         if (!roomState.owners[roomId]) {
@@ -551,61 +558,22 @@ module.exports = (io) => {
 
     socket.on('sendMessage', async ({ message, userName, time }) => {
       try {
-        // First check if socket has roomId, if not try to restore from socketData
-        let roomId = socket.roomId;
-        let userId = socket.userId;
+        const roomId = socket.roomId;
         
         if (!roomId) {
-          const socketData = roomState.socketData[socket.id];
-          if (socketData && socketData.roomId) {
-            roomId = socketData.roomId;
-            userId = socketData.userId;
-            socket.roomId = roomId;
-            socket.userId = userId;
-            socket.userName = socketData.userName;
-            console.log(`🔄 Restored room state for socket ${socket.id}: roomId=${roomId}, userId=${userId}`);
-          }
-        }
-        
-        // Double check: Find user in any room if still no roomId
-        if (!roomId && userId) {
-          for (const [searchRoomId, users] of Object.entries(roomState.users)) {
-            const userInRoom = users.find(u => u.userId === userId && u.socketId === socket.id);
-            if (userInRoom) {
-              roomId = searchRoomId;
-              socket.roomId = roomId;
-              roomState.socketData[socket.id] = { roomId, userId, userName };
-              console.log(`🔍 Found user ${userId} in room ${roomId}, restored state`);
-              break;
-            }
-          }
-        }
-
-        if (!roomId) {
+          console.error(`❌ Socket ${socket.id} attempted to send message without roomId. Socket state:`, {
+            socketRoomId: socket.roomId,
+            socketUserId: socket.userId,
+            socketUserName: socket.userName,
+            socketDataExists: !!roomState.socketData[socket.id]
+          });
           socket.emit('error', { message: 'Not in a room. Please rejoin the room.' });
-          console.error(`❌ Socket ${socket.id} attempted to send message without being in a room. Available rooms:`, Object.keys(roomState.users));
-          return;
-        }
-
-        // Verify room exists
-        const roomExists = await checkRoomExists(roomId);
-        if (!roomExists) {
-          socket.emit('error', { message: 'Room not found' });
-          console.error(`❌ Room ${roomId} not found for message from socket ${socket.id}`);
-          return;
-        }
-
-        // Verify user is actually in the room
-        const userInRoom = roomState.users[roomId]?.find(u => u.userId === userId);
-        if (!userInRoom) {
-          socket.emit('error', { message: 'You are not a member of this room' });
-          console.error(`❌ User ${userId} not found in room ${roomId} users:`, roomState.users[roomId]);
           return;
         }
 
         const messageData = { message, userName, time };
         io.to(roomId).emit('receiveMessage', messageData);
-        console.log(`💬 Message sent in room ${roomId} by ${userName}:`, message.substring(0, 50));
+        console.log(`💬 Message sent in room ${roomId} by ${userName}: ${message.substring(0, 50)}`);
       } catch (error) {
         console.error('❌ Error in sendMessage:', error);
         socket.emit('error', { message: `Failed to send message: ${error.message}` });

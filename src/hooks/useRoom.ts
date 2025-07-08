@@ -204,9 +204,22 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         });
         return;
       }
+      
+      // Ensure we're still in the room before sending
+      if (users.length === 0) {
+        console.warn('useRoom: No users in room, attempting to rejoin before sending message');
+        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        // Don't send message immediately, let user try again after rejoin
+        toast({
+          title: 'Rejoining Room',
+          description: 'Reconnecting to room. Please try sending your message again.',
+        });
+        return;
+      }
+      
       socketManager.sendMessage(message, userName);
     },
-    [userName, isConnected, toast]
+    [userName, isConnected, toast, users.length, roomId, userId, roomTitle]
   );
 
   const kickUser = useCallback(
