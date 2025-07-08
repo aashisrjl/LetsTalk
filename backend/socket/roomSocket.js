@@ -1,223 +1,3 @@
-// const mongoose = require('mongoose');
-// const Room = require('../database/models/room.model');
-// const User = require('../database/models/user.model');
-
-// module.exports = (io) => {
-//   const roomState = {
-//     users: {}, // { roomId: [{ socketId, userId, userName, joinTime, isAudioEnabled, isVideoEnabled, photo }] }
-//     owners: {}, // { roomId: ownerUserId }
-//     sessionTimes: {}, // { socketId: startTime }
-//     roomCache: {}, // { roomId: boolean } to cache room existence
-//     socketData: {}, // { socketId: { roomId, userId, userName } } to persist socket state
-//   };
-
-//   const checkRoomExists = async (roomId) => {
-//     if (roomState.roomCache[roomId] !== undefined) return roomState.roomCache[roomId];
-//     const room = await Room.findOne({ roomId }).select('maxParticipants participants');
-//     roomState.roomCache[roomId] = !!room;
-//     return { exists: !!room, maxParticipants: room?.maxParticipants || 0, currentParticipants: room?.participants.length || 0 };
-//   };
-
-//   const addUserToRoom = async (roomId, userData) => {
-//     if (!roomState.users[roomId]) roomState.users[roomId] = [];
-//     const roomInfo = await checkRoomExists(roomId);
-//     if (!roomInfo.exists) {
-//       await Room.create({ roomId, createdBy: new mongoose.Types.ObjectId(userData.userId), participants: [new mongoose.Types.ObjectId(userData.userId)], isLive: true, maxParticipants: 10 }); // Default max if not set
-//       roomState.roomCache[roomId] = true;
-//     } else if (roomState.users[roomId].length >= roomInfo.maxParticipants) {
-//       return { error: 'room full' };
-//     }
-
-//     const existingUserIndex = roomState.users[roomId].findIndex((u) => u.userId === userData.userId);
-//     if (existingUserIndex !== -1) {
-//       roomState.users[roomId][existingUserIndex].socketId = userData.socketId;
-//       const oldSocket = io.sockets.sockets.get(roomState.users[roomId][existingUserIndex].socketId);
-//       if (oldSocket && oldSocket.id !== userData.socketId) oldSocket.disconnect(true);
-//     } else {
-//       roomState.users[roomId].push(userData);
-//       await Room.findOneAndUpdate(
-//         { roomId },
-//         { $addToSet: { participants: new mongoose.Types.ObjectId(userData.userId) } },
-//         { upsert: true, new: true, useFindAndModify: false }
-//       );
-//     }
-//     const usersInThisRoom = roomState.users[roomId].filter((u) => u.userId !== userData.userId).map((u) => u.socketId);
-//     io.to(roomId).emit('userConnected', { userId: userData.userId, socketId: userData.socketId });
-//     socket.emit('all users', usersInThisRoom);
-//     emitRoomUpdate(roomId);
-//     return roomState.users[roomId];
-//   };
-
-//   const removeUserFromRoom = async (roomId, userId) => {
-//     if (!roomState.users[roomId]) return null;
-//     const userIndex = roomState.users[roomId].findIndex((u) => u.userId === userId);
-//     if (userIndex === -1) return null;
-//     const removedUser = roomState.users[roomId][userIndex];
-//     roomState.users[roomId].splice(userIndex, 1);
-//     await Room.findOneAndUpdate(
-//       { roomId },
-//       { $pull: { participants: new mongoose.Types.ObjectId(userId) }, isLive: roomState.users[roomId].length > 0 },
-//       { useFindAndModify: false }
-//     );
-//     io.to(roomId).emit('user left', removedUser.socketId);
-//     emitRoomUpdate(roomId);
-//     return removedUser;
-//   };
-
-//   const updateUserStats = async (userId, sessionDuration) => {
-//     const sessionHours = sessionDuration / (1000 * 60 * 60);
-//     await User.findByIdAndUpdate(userId, { $inc: { 'stats.totalHours': sessionHours } });
-//   };
-
-//   const handleOwnershipTransfer = (roomId, leavingUserId) => {
-//     if (roomState.owners[roomId] === leavingUserId && roomState.users[roomId]?.length > 0) {
-//       const newOwner = roomState.users[roomId][0];
-//       roomState.owners[roomId] = newOwner.userId;
-//       io.to(roomId).emit('ownershipTransferred', { newOwnerId: newOwner.userId });
-//       return newOwner.userId;
-//     }
-//     return null;
-//   };
-
-//   const emitRoomUpdate = (roomId) => {
-//     io.to(roomId).emit('roomUsers', {
-//       users: roomState.users[roomId]?.map((u) => ({ userId: u.userId })) || [],
-//       ownerId: roomState.owners[roomId] || '',
-//     });
-//   };
-
-//   io.on('connection', (socket) => {
-//     console.log('🔌 Client connected:', socket.id);
-
-//     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
-//       try {
-//         const roomInfo = await checkRoomExists(roomId);
-//         if (!roomInfo.exists) {
-//           await Room.create({ roomId, createdBy: new mongoose.Types.ObjectId(userId), participants: [new mongoose.Types.ObjectId(userId)], isLive: true, maxParticipants: 10 }); // Default max if not set
-//           roomState.roomCache[roomId] = true;
-//         }
-//         if (socket.roomId && socket.roomId !== roomId) {
-//           await removeUserFromRoom(socket.roomId, socket.userId);
-//           socket.leave(socket.roomId);
-//           handleOwnershipTransfer(socket.roomId, socket.userId);
-//           emitRoomUpdate(socket.roomId);
-//         }
-//         socket.join(roomId);
-//         socket.roomId = roomId;
-//         socket.userId = userId;
-//         socket.userName = userName;
-//         roomState.socketData[socket.id] = { roomId, userId, userName };
-//         if (!roomState.owners[roomId]) roomState.owners[roomId] = userId;
-//         const user = await User.findById(userId).select('name photo stats');
-//         const userData = { socketId: socket.id, userId, userName: user.name, photo: user.photo, joinTime: new Date(), isAudioEnabled: false, isVideoEnabled: false };
-//         const result = await addUserToRoom(roomId, userData);
-//         if (result.error === 'room full') {
-//           socket.emit('room full');
-//           socket.leave(roomId);
-//           return;
-//         }
-//         roomState.sessionTimes[socket.id] = new Date();
-//         socket.to(roomId).emit('userJoined', { userId, userName: user.name, photo: user.photo, socketId: socket.id });
-//         emitRoomUpdate(roomId);
-//       } catch (error) {
-//         console.error('❌ Error in joinRoom:', error);
-//         socket.emit('error', { message: `Failed to join room: ${error.message}` });
-//       }
-//     });
-
-//     socket.on('sending signal', ({ userToSignal, signal, callerID }) => {
-//       const roomId = roomState.socketData[callerID]?.roomId;
-//       const targetUser = roomState.users[roomId]?.find((u) => u.socketId === userToSignal);
-//       if (targetUser) io.to(userToSignal).emit('user joined', { signal, callerID });
-//     });
-
-//     socket.on('returning signal', ({ callerID, signal }) => {
-//       io.to(callerID).emit('receiving returned signal', { signal, id: socket.id });
-//     });
-
-//     socket.on('change', (payload) => {
-//       const { roomId } = socket;
-//       if (roomId) io.to(roomId).emit('change', payload);
-//     });
-
-//     socket.on('leaveRoom', async ({ roomId, userId }) => {
-//       try {
-//         const removedUser = await removeUserFromRoom(roomId, userId);
-//         if (removedUser) {
-//           const sessionDuration = new Date() - removedUser.joinTime;
-//           await updateUserStats(userId, sessionDuration);
-//           handleOwnershipTransfer(roomId, userId);
-//           emitRoomUpdate(roomId);
-//           socket.to(roomId).emit('userLeft', { userId, socketId: removedUser.socketId });
-//         }
-//         socket.leave(roomId);
-//         delete socket.roomId;
-//         delete socket.userId;
-//         delete socket.userName;
-//         delete roomState.socketData[socket.id];
-//       } catch (error) {
-//         console.error('❌ Error in leaveRoom:', error);
-//         socket.emit('error', { message: `Failed to leave room: ${error.message}` });
-//       }
-//     });
-
-//     socket.on('sendMessage', async ({ message, userName, time }) => {
-//       if (socket.roomId) io.to(socket.roomId).emit('receiveMessage', { message, userName, time });
-//     });
-
-//     socket.on('mediaStateChange', ({ userId, mediaType, isEnabled }) => {
-//       const { roomId } = socket;
-//       if (roomId && roomState.users[roomId]) {
-//         const userInRoom = roomState.users[roomId].find((u) => u.userId === userId);
-//         if (userInRoom) {
-//           if (mediaType === 'audio') userInRoom.isAudioEnabled = isEnabled;
-//           else if (mediaType === 'video') userInRoom.isVideoEnabled = isEnabled;
-//           io.to(roomId).emit('mediaStateChange', { userId, mediaType, isEnabled });
-//           emitRoomUpdate(roomId);
-//         }
-//       }
-//     });
-
-//     socket.on('kickUser', async ({ roomId, userId }) => {
-//       if (socket.userId === roomState.owners[roomId]) {
-//         const targetUser = roomState.users[roomId]?.find((u) => u.userId === userId);
-//         if (targetUser) {
-//           io.to(targetUser.socketId).emit('kicked', { reason: 'Kicked by room owner' });
-//           await removeUserFromRoom(roomId, userId);
-//           emitRoomUpdate(roomId);
-//           io.to(roomId).emit('userLeft', { userId, socketId: targetUser.socketId });
-//         }
-//       }
-//     });
-
-//     socket.on('disconnect', async () => {
-//       const { roomId, userId } = socket;
-//       if (roomId && userId) {
-//         setTimeout(async () => {
-//           const removedUser = await removeUserFromRoom(roomId, userId);
-//           if (removedUser) {
-//             const sessionDuration = new Date() - removedUser.joinTime;
-//             await updateUserStats(userId, sessionDuration);
-//             handleOwnershipTransfer(roomId, userId);
-//             emitRoomUpdate(roomId);
-//             io.to(roomId).emit('userLeft', { userId, socketId: removedUser.socketId });
-//           }
-//           delete roomState.sessionTimes[socket.id];
-//           delete roomState.socketData[socket.id];
-//         }, 20000);
-//       }
-//     });
-
-//     socket.on('error', (error) => {
-//       console.error(`❌ Socket error for ${socket.id}:`, error);
-//     });
-//   });
-
-//   process.on('SIGTERM', () => console.log('🧹 Cleaning up socket connections...'));
-//   process.on('SIGINT', () => console.log('🧹 Cleaning up socket connections...'));
-
-//   return { roomState };
-// };
 const mongoose = require('mongoose');
 const Room = require('../database/models/room.model');
 const User = require('../database/models/user.model');
@@ -227,19 +7,31 @@ module.exports = (io) => {
     users: {}, // { roomId: [{ socketId, userId, userName, joinTime, isAudioEnabled, isVideoEnabled, photo }] }
     owners: {}, // { roomId: ownerUserId }
     sessionTimes: {}, // { socketId: startTime }
-    roomCache: {}, // { roomId: boolean } to cache room existence
+    roomCache: {}, // { roomId: { exists: boolean, maxParticipants: number } } to cache room data
     socketData: {}, // { socketId: { roomId, userId, userName } } to persist socket state
+    reconnecting: new Set(), // Track sockets attempting reconnection
+    updateLocks: new Map(), // Lock to prevent concurrent room updates
   };
 
   const checkRoomExists = async (roomId) => {
-    if (roomState.roomCache[roomId] !== undefined) return roomState.roomCache[roomId];
-    const room = await Room.findOne({ roomId });
-    roomState.roomCache[roomId] = !!room;
+    if (roomState.roomCache[roomId]) return roomState.roomCache[roomId];
+    const room = await Room.findOne({ roomId }).select('maxParticipants');
+    roomState.roomCache[roomId] = {
+      exists: !!room,
+      maxParticipants: room ? room.maxParticipants : 10,
+    };
     return roomState.roomCache[roomId];
   };
 
   const addUserToRoom = async (roomId, userData) => {
     if (!roomState.users[roomId]) roomState.users[roomId] = [];
+
+    const roomData = await checkRoomExists(roomId);
+    if (!roomData.exists) {
+      await Room.create({ roomId, createdBy: new mongoose.Types.ObjectId(userData.userId), participants: [new mongoose.Types.ObjectId(userData.userId)], isLive: true });
+      roomData.exists = true;
+      roomData.maxParticipants = 10;
+    }
 
     const existingUserIndex = roomState.users[roomId].findIndex((u) => u.userId === userData.userId);
     if (existingUserIndex !== -1) {
@@ -256,7 +48,13 @@ module.exports = (io) => {
         console.log(`🔄 User ${userData.userId} already in room ${roomId} with same socketId ${oldSocketId}, skipping update`);
       }
     } else {
+      if (roomState.users[roomId].length >= roomData.maxParticipants) {
+        throw new Error('Room is full');
+      }
       roomState.users[roomId].push(userData);
+      if (!roomState.updateLocks.has(roomId)) roomState.updateLocks.set(roomId, false);
+      while (roomState.updateLocks.get(roomId)) await new Promise(resolve => setTimeout(resolve, 100));
+      roomState.updateLocks.set(roomId, true);
       try {
         await Room.findOneAndUpdate(
           { roomId },
@@ -266,6 +64,8 @@ module.exports = (io) => {
       } catch (error) {
         console.error(`❌ Error adding user ${userData.userId} to room ${roomId}:`, error);
         throw error;
+      } finally {
+        roomState.updateLocks.set(roomId, false);
       }
     }
 
@@ -283,6 +83,9 @@ module.exports = (io) => {
     const removedUser = roomState.users[roomId][userIndex];
     roomState.users[roomId].splice(userIndex, 1);
 
+    if (!roomState.updateLocks.has(roomId)) roomState.updateLocks.set(roomId, false);
+    while (roomState.updateLocks.get(roomId)) await new Promise(resolve => setTimeout(resolve, 100));
+    roomState.updateLocks.set(roomId, true);
     try {
       let updated = false;
       for (let attempts = 0; attempts < 3; attempts++) {
@@ -290,7 +93,7 @@ module.exports = (io) => {
           const room = await Room.findOne({ roomId });
           if (!room) {
             console.error(`❌ Room ${roomId} not found in database`);
-            roomState.roomCache[roomId] = false;
+            roomState.roomCache[roomId] = { exists: false, maxParticipants: 10 };
             return removedUser;
           }
           room.participants = room.participants.filter((p) => p.toString() !== userId);
@@ -313,6 +116,8 @@ module.exports = (io) => {
       }
     } catch (error) {
       console.error(`❌ Error updating room ${roomId}:`, error);
+    } finally {
+      roomState.updateLocks.set(roomId, false);
     }
 
     io.to(roomId).emit('userDisconnected', { userId });
@@ -345,24 +150,8 @@ module.exports = (io) => {
   const emitRoomUpdate = (roomId) => {
     const users = roomState.users[roomId] || [];
     const ownerId = roomState.owners[roomId] || '';
-    
-    io.to(roomId).emit('roomUsers', {
-      users: users,
-      ownerId: ownerId,
-    });
-    
+    io.to(roomId).emit('roomUsers', { users, ownerId });
     console.log(`📢 Emitted roomUsers for room ${roomId}: ${users.length} users, owner: ${ownerId}`);
-    
-    // Also emit to each user individually to ensure they get the update
-    users.forEach(user => {
-      const userSocket = io.sockets.sockets.get(user.socketId);
-      if (userSocket) {
-        userSocket.emit('roomUsers', {
-          users: users,
-          ownerId: ownerId,
-        });
-      }
-    });
   };
 
   io.on('connection', (socket) => {
@@ -370,14 +159,15 @@ module.exports = (io) => {
 
     socket.on('joinRoom', async ({ roomId, userId, userName, roomTitle }) => {
       try {
-        const roomExists = await checkRoomExists(roomId);
-        if (!roomExists) {
+        const roomData = await checkRoomExists(roomId);
+        if (!roomData.exists) {
           console.log(`useRoom: Room ${roomId} not found, attempting to create`);
           await Room.create({ roomId, createdBy: new mongoose.Types.ObjectId(userId), participants: [new mongoose.Types.ObjectId(userId)], isLive: true });
-          roomState.roomCache[roomId] = true;
+          roomData.exists = true;
+          roomData.maxParticipants = 10;
         }
 
-        if (socket.roomId === roomId && socket.userId === userId) {
+        if (socket.roomId === roomId && socket.userId === userId && !roomState.reconnecting.has(socket.id)) {
           console.log(`🔄 User ${userId} already in room ${roomId} on this socket, emitting current state`);
           emitRoomUpdate(roomId);
           return;
@@ -389,18 +179,16 @@ module.exports = (io) => {
           if (removedUser) {
             socket.leave(socket.roomId);
             const newOwnerId = handleOwnershipTransfer(socket.roomId, socket.userId);
-            if (newOwnerId) {
-              io.to(socket.roomId).emit('ownershipTransferred', { newOwnerId });
-            }
+            if (newOwnerId) io.to(socket.roomId).emit('ownershipTransferred', { newOwnerId });
             emitRoomUpdate(socket.roomId);
             io.to(socket.roomId).emit('userLeft', { userId: socket.userId, socketId: socket.id });
-            io.to(socket.roomId).emit('userDisconnected', { userId: socket.userId });
           }
         }
 
         const existingUser = roomState.users[roomId]?.find(u => u.userId === userId);
         if (existingUser && existingUser.socketId !== socket.id) {
           console.log(`🔄 User ${userId} switching socket in room ${roomId}, updating socketId from ${existingUser.socketId} to ${socket.id}`);
+          roomState.reconnecting.add(socket.id);
           const oldSocket = io.sockets.sockets.get(existingUser.socketId);
           if (oldSocket) {
             oldSocket.disconnect(true);
@@ -412,6 +200,7 @@ module.exports = (io) => {
           socket.userId = userId;
           socket.userName = userName;
           roomState.socketData[socket.id] = { roomId, userId, userName };
+          roomState.reconnecting.delete(socket.id);
           emitRoomUpdate(roomId);
           return;
         }
@@ -483,19 +272,23 @@ module.exports = (io) => {
         console.log(`👤 User ${user.name} joined room ${roomId}`);
       } catch (error) {
         console.error('❌ Error in joinRoom:', error.message, error.stack);
-        socket.emit('error', { message: `Failed to join room: ${error.message}` });
+        if (error.message === 'Room is full') {
+          socket.emit('room full');
+        } else {
+          socket.emit('error', { message: `Failed to join room: ${error.message}` });
+        }
       }
     });
 
     socket.on('offer', ({ toUserId, offer, roomId, fromUserId }) => {
-      const targetUsers = roomState.users[roomId]?.filter((u) => u.userId !== fromUserId);
-      if (targetUsers) {
+      const targetUsers = roomState.users[roomId]?.filter((u) => u.userId !== fromUserId && u.userId === toUserId);
+      if (targetUsers && targetUsers.length > 0) {
         targetUsers.forEach((user) => {
           io.to(user.socketId).emit('offer', { fromUserId, toUserId: user.userId, offer, roomId });
           console.log(`📡 Broadcasted offer from ${fromUserId} to ${user.userId} in room ${roomId}`);
         });
       } else {
-        socket.emit('error', { message: `No target users found in room ${roomId}` });
+        socket.emit('error', { message: `No target user ${toUserId} found in room ${roomId}` });
       }
     });
 
@@ -534,9 +327,7 @@ module.exports = (io) => {
           await updateUserStats(userId, sessionDuration);
 
           const newOwnerId = handleOwnershipTransfer(roomId, userId);
-          if (newOwnerId) {
-            io.to(roomId).emit('ownershipTransferred', { newOwnerId });
-          }
+          if (newOwnerId) io.to(roomId).emit('ownershipTransferred', { newOwnerId });
 
           emitRoomUpdate(roomId);
           socket.to(roomId).emit('userDisconnected', { userId });
@@ -634,10 +425,24 @@ module.exports = (io) => {
 
         console.log(`🔌 Client disconnected: ${socket.id} from room ${roomId}`);
 
+        // Check if another socket is active for this user
+        const activeUser = roomState.users[roomId]?.find(u => u.userId === userId && u.socketId !== socket.id);
+        if (activeUser) {
+          console.log(`🔄 User ${userId} has an active socket ${activeUser.socketId}, skipping disconnect cleanup`);
+          return;
+        }
+
+        // Delay cleanup to allow reconnection
         setTimeout(async () => {
+          if (roomState.reconnecting.has(socket.id)) {
+            console.log(`🔄 Reconnection in progress for ${socket.id}, skipping cleanup`);
+            roomState.reconnecting.delete(socket.id);
+            return;
+          }
+
           const currentUser = roomState.users[roomId]?.find(u => u.userId === userId);
-          if (currentUser && currentUser.socketId !== socket.id) {
-            console.log(`🔄 User ${userId} has reconnected with different socket, skipping disconnect cleanup`);
+          if (!currentUser || currentUser.socketId !== socket.id) {
+            console.log(`🔄 User ${userId} already handled by another socket, skipping disconnect cleanup`);
             return;
           }
 
@@ -657,7 +462,7 @@ module.exports = (io) => {
           delete roomState.sessionTimes[socket.id];
           delete roomState.socketData[socket.id];
           delete roomState.roomCache[roomId];
-        }, 20000);
+        }, 6000); // Match client reconnectDelay
       } catch (error) {
         console.error('❌ Error during disconnect cleanup:', error);
       }
