@@ -39,7 +39,7 @@ const Auth = () => {
             {/* Logo and Header */}
             <div className="text-center space-y-4">
               <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-xl sm:text-2xl">FT</span>
+                <span className="text-white font-bold text-xl sm:text-2xl">LT</span>
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
