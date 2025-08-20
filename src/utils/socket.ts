@@ -12,7 +12,8 @@ class SocketManager {
   private isConnecting: boolean = false;
   private isJoining: boolean = false;
   private lastJoinRoomParams: { roomId: string; userId: string; userName: string; roomTitle: string } | null = null;
-  private reconnectDelay: number = 4000;
+  private lastJoinSuccess: boolean = false; // Track last join attempt success
+  private reconnectDelay: number = 6000; // Increased to 6 seconds to align with server timeout
 
   private constructor() {
     if (SocketManager.instance) {
@@ -63,7 +64,7 @@ class SocketManager {
     this.socket.on('connect', () => {
       this.isConnecting = false;
       console.log('SocketManager: Connected to server, socket ID:', this.socket?.id);
-      if (this.lastJoinRoomParams && !this.isJoining) {
+      if (this.lastJoinRoomParams && !this.isJoining && !this.lastJoinSuccess) {
         this.joinRoom(
           this.lastJoinRoomParams.roomId,
           this.lastJoinRoomParams.userId,
@@ -81,12 +82,16 @@ class SocketManager {
     this.socket.on('disconnect', (reason) => {
       this.isConnecting = false;
       this.isJoining = false;
+      this.lastJoinSuccess = false;
       console.log('SocketManager: Disconnected:', reason);
+      delete this.socket?.roomId;
+      delete this.socket?.userId;
+      delete this.socket?.userName;
     });
 
     this.socket.on('reconnect', (attempt) => {
       console.log(`SocketManager: Reconnected after attempt ${attempt}, socket ID: ${this.socket?.id}`);
-      if (this.lastJoinRoomParams && !this.isJoining) {
+      if (this.lastJoinRoomParams && !this.isJoining && !this.lastJoinSuccess) {
         this.joinRoom(
           this.lastJoinRoomParams.roomId,
           this.lastJoinRoomParams.userId,
@@ -98,6 +103,12 @@ class SocketManager {
 
     this.socket.on('error', (err) => {
       console.error('SocketManager: Server error:', err);
+    });
+
+    this.socket.on('room full', () => {
+      this.isJoining = false;
+      this.lastJoinSuccess = false;
+      console.log('SocketManager: Room is full, stopping join attempts');
     });
 
     return this.socket;
@@ -112,6 +123,7 @@ class SocketManager {
       this.isConnecting = false;
       this.isJoining = false;
       this.lastJoinRoomParams = null;
+      this.lastJoinSuccess = false;
     }
   }
 
@@ -126,25 +138,41 @@ class SocketManager {
     }
     if (this.socket.connected) {
       this.isJoining = true;
+      this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
       console.log('SocketManager: Joining room:', { roomId, userId, userName, roomTitle });
-      this.socket.emit('joinRoom', { roomId, userId, userName, roomTitle });
+      this.socket.emit('joinRoom', { roomId, userId, userName, roomTitle }, (response: any) => {
+        // Optional callback for server acknowledgment (if implemented)
+        console.log('SocketManager: JoinRoom response:', response);
+      });
       this.socket.roomId = roomId;
       this.socket.userId = userId;
       this.socket.userName = userName;
-      this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
-      
-      // Set up multiple fallbacks to clear joining state
+
+      // Clear joining state on successful join or error
       const clearJoining = () => {
         this.isJoining = false;
         console.log('SocketManager: Cleared joining state for room:', roomId);
       };
       
-      this.socket.once('roomUsers', clearJoining);
-      this.socket.once('error', clearJoining);
+      const handleRoomUsers = () => {
+        this.lastJoinSuccess = true;
+        clearJoining();
+      };
+      
+      const handleError = (data: any) => {
+        this.lastJoinSuccess = false;
+        clearJoining();
+        console.error('SocketManager: Join error:', data.message);
+      };
+
+      this.socket.once('roomUsers', handleRoomUsers);
+      this.socket.once('error', handleError);
+      this.socket.once('room full', handleError);
       setTimeout(clearJoining, 10000); // Fallback timeout
     } else {
       console.error('SocketManager: Cannot join room: Socket not connected');
       this.lastJoinRoomParams = { roomId, userId, userName, roomTitle };
+      this.lastJoinSuccess = false;
     }
   }
 
@@ -157,6 +185,7 @@ class SocketManager {
       delete this.socket.userName;
       this.lastJoinRoomParams = null;
       this.isJoining = false;
+      this.lastJoinSuccess = false;
     } else {
       console.error('SocketManager: Cannot leave room: Socket not connected');
     }

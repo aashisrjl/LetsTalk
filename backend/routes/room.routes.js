@@ -5,10 +5,10 @@ const { isAuthenticated } = require('../middleware/auth.middleware');
 
 router.post('/rooms', isAuthenticated, createRoom);
 router.get("/rooms/count", countAllRooms);
-router.get('/rooms/featured', getFeaturedRooms);   // move this up
-router.get('/rooms/live', getLiveRooms);           // move this up
+router.get('/rooms/featured', getFeaturedRooms);   
+router.get('/rooms/live', getLiveRooms);           
 router.get('/rooms', getPublicRooms);
-router.get('/rooms/:roomId', isAuthenticated, getRoomById); // keep this last
+router.get('/rooms/:roomId', isAuthenticated, getRoomById); 
 router.delete('/rooms/:roomId', isAuthenticated, deleteRoom);
 
 

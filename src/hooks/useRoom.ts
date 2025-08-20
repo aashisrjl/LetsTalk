@@ -33,6 +33,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const hasJoinedRef = useRef(false);
   const retryCountRef = useRef(0);
   const maxRetries = 3;
+  const isRoomFullRef = useRef(false);
 
   console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
 
@@ -55,9 +56,12 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: ✅ Connected to server, socket ID:', socket.id);
       setIsConnected(true);
       retryCountRef.current = 0;
+      isRoomFullRef.current = false;
       if (!hasJoinedRef.current) {
         console.log('useRoom: Joining room after connection');
-        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        setTimeout(() => {
+          socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        }, 6100); // Match socketManager's reconnectDelay
         hasJoinedRef.current = true;
       }
     };
@@ -148,19 +152,29 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         description: data.message || 'An error occurred',
         variant: 'destructive',
       });
-      if (data.message === 'Room not found' && retryCountRef.current < maxRetries) {
+      if (data.message === 'Room not found' && retryCountRef.current < maxRetries && socket.connected) {
         console.log(`useRoom: Retrying joinRoom (attempt ${retryCountRef.current + 1})`);
         retryCountRef.current += 1;
         setTimeout(() => {
           socketManager.joinRoom(roomId, userId, userName, roomTitle);
-        }, 4000);
+        }, 6000); // Match reconnectDelay
       } else if (data.message === 'Room not found') {
         console.log('useRoom: Max retries reached or room not found, redirecting to /rooms');
         navigate('/rooms');
         hasJoinedRef.current = false;
-      } else if (data.message === 'Not in a room') {
+      } else if (data.message === 'Not in a room' && socket.connected && !isRoomFullRef.current) {
         console.log('useRoom: Reattempting join due to Not in a room error');
         socketManager.joinRoom(roomId, userId, userName, roomTitle);
+      } else if (data.message === 'Room is full') {
+        console.log('useRoom: Room is full, redirecting to /rooms');
+        toast({
+          title: 'Room Full',
+          description: 'The room has reached its maximum capacity',
+          variant: 'destructive',
+        });
+        navigate('/rooms');
+        hasJoinedRef.current = false;
+        isRoomFullRef.current = true;
       }
     });
 
@@ -168,6 +182,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     socket.on('roomUsers', onRoomUsers);
+    socket.on('room full', () => {
+      isRoomFullRef.current = true;
+      errorCleanup();
+    });
 
     cleanupFunctionsRef.current = [
       userJoinedCleanup,
@@ -179,16 +197,16 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       () => socket.off('connect', onConnect),
       () => socket.off('disconnect', onDisconnect),
       () => socket.off('connect_error', onConnectError),
-      () => socket.off('roomUsers', onRoomUsers)
+      () => socket.off('roomUsers', onRoomUsers),
+      () => socket.off('room full'),
     ];
 
     if (socketManager.isConnected() && !hasJoinedRef.current) {
       console.log('useRoom: Initial socket connection detected, joining room');
       hasJoinedRef.current = true;
-      // Small delay to ensure socket is fully ready
       setTimeout(() => {
         socketManager.joinRoom(roomId, userId, userName, roomTitle);
-      }, 100);
+      }, 6100); // Match socketManager's reconnectDelay
     }
   }, [roomId, userId, userName, roomTitle, toast, navigate]);
 
@@ -206,10 +224,9 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       }
       
       // Ensure we're still in the room before sending
-      if (users.length === 0) {
+      if (users.length === 0 && socketManager.isConnected() && !isRoomFullRef.current) {
         console.warn('useRoom: No users in room, attempting to rejoin before sending message');
         socketManager.joinRoom(roomId, userId, userName, roomTitle);
-        // Don't send message immediately, let user try again after rejoin
         toast({
           title: 'Rejoining Room',
           description: 'Reconnecting to room. Please try sending your message again.',
@@ -245,8 +262,11 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Component unmounting, leaving room...');
       cleanupFunctionsRef.current.forEach(cleanup => cleanup());
       cleanupFunctionsRef.current = [];
-      socketManager.leaveRoom(roomId, userId);
+      if (hasJoinedRef.current) {
+        socketManager.leaveRoom(roomId, userId);
+      }
       hasJoinedRef.current = false;
+      isRoomFullRef.current = false;
     };
   }, [initializeConnection]);
 

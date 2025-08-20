@@ -80,7 +80,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
               pc.addTrack(track, stream);
             }
           });
-          if (!pc.currentRemoteDescription) createOffer(targetUserId);
+          if (pc.iceConnectionState === 'completed' && !pc.currentRemoteDescription) createOffer(targetUserId);
         });
         return stream;
       } catch (error: any) {
@@ -131,7 +131,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         const socket = socketManager.getSocket();
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('iceCandidate', {
             fromUserId: userId,
             toUserId: targetUserId,
@@ -155,12 +155,16 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
   }, [roomId, userId]);
 
   const createOffer = useCallback(async (targetUserId: string) => {
-    const peerConnection = createPeerConnection(targetUserId);
+    const peerConnection = peerConnections.current.get(targetUserId);
+    if (!peerConnection || peerConnection.signalingState !== 'stable') {
+      console.log(`useWebRTC: Skipping offer for ${targetUserId}, signaling state: ${peerConnection?.signalingState}`);
+      return;
+    }
     try {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
       const socket = socketManager.getSocket();
-      if (socket) {
+      if (socket && socket.connected) {
         socket.emit('offer', {
           fromUserId: userId,
           toUserId: targetUserId,
@@ -171,7 +175,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     } catch (error) {
       console.error('useWebRTC: Error creating offer:', error);
     }
-  }, [createPeerConnection, roomId, userId]);
+  }, [roomId, userId]);
 
   const handleOffer = useCallback(
     async (fromUserId: string, offer: RTCSessionDescriptionInit) => {
@@ -182,7 +186,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         const socket = socketManager.getSocket();
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('answer', {
             fromUserId: userId,
             toUserId: fromUserId,
@@ -233,7 +237,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       setIsVideoEnabled(newState);
       console.log('useWebRTC: Toggled video:', newState, 'Track:', videoTrack);
       const socket = socketManager.getSocket();
-      if (socket) {
+      if (socket && socket.connected) {
         socket.emit('mediaStateChange', {
           userId,
           mediaType: 'video',
@@ -245,7 +249,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       if (stream) {
         setIsVideoEnabled(true);
         const socket = socketManager.getSocket();
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('mediaStateChange', {
             userId,
             mediaType: 'video',
@@ -264,7 +268,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       setIsAudioEnabled(newState);
       console.log('useWebRTC: Toggled audio:', newState, 'Track:', audioTrack);
       const socket = socketManager.getSocket();
-      if (socket) {
+      if (socket && socket.connected) {
         socket.emit('mediaStateChange', {
           userId,
           mediaType: 'audio',
@@ -276,7 +280,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       if (stream) {
         setIsAudioEnabled(true);
         const socket = socketManager.getSocket();
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('mediaStateChange', {
             userId,
             mediaType: 'audio',
@@ -300,7 +304,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
           setIsScreenSharing(false);
           setIsVideoEnabled(true);
           const socket = socketManager.getSocket();
-          if (socket) {
+          if (socket && socket.connected) {
             socket.emit('mediaStateChange', {
               userId,
               mediaType: 'video',
@@ -326,12 +330,12 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
           if (sender) sender.replaceTrack(videoTrack).catch((error) =>
             console.error(`useWebRTC: Error replacing track for ${targetUserId}:`, error)
           );
-          if (!pc.currentRemoteDescription) createOffer(targetUserId);
+          if (pc.iceConnectionState === 'completed' && !pc.currentRemoteDescription) createOffer(targetUserId);
         });
         setIsScreenSharing(true);
         setIsVideoEnabled(true);
         const socket = socketManager.getSocket();
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('mediaStateChange', {
             userId,
             mediaType: 'video',
@@ -383,14 +387,16 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       if (newUserId !== userId && !otherUsers.current.has(newUserId)) {
         otherUsers.current.add(newUserId);
         console.log('useWebRTC: User connected, creating offer for:', newUserId);
-        createOffer(newUserId);
+        const peerConnection = peerConnections.current.get(newUserId);
+        if (peerConnection && peerConnection.iceConnectionState === 'completed') createOffer(newUserId);
       }
     };
     const handleRoomUsers = ({ users }: { users: { userId: string }[] }) => {
       const newUsers = users.filter((u) => u.userId !== userId && !peerConnections.current.has(u.userId));
       newUsers.forEach((u) => {
         otherUsers.current.add(u.userId);
-        createOffer(u.userId);
+        const peerConnection = peerConnections.current.get(u.userId);
+        if (peerConnection && peerConnection.iceConnectionState === 'completed') createOffer(u.userId);
       });
     };
     const handleUserDisconnected = ({ userId: disconnectedUserId }: { userId: string }) => {
