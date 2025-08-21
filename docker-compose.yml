@@ -9,3 +9,19 @@ services:
     env_file:
       - ./backend/.env
     command: npm start
+    networks:
+      - LetsTalk
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frontend_container
+    ports:
+    - "8080:8080"
+    command: npm run dev
+    networks:
+    - LetsTalk
+    
+networks:
+  LetsTalk:
+    driver: bridge

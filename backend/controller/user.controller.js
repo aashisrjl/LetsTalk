@@ -1,5 +1,4 @@
 
-const { User2 } = require("lucide-react");
 const User = require("../database/models/user.model"); // Adjust the path as necessary
 
 exports.getUserProfile = async (req, res) => {
