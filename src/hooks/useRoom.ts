@@ -34,8 +34,14 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
   const retryCountRef = useRef(0);
   const maxRetries = 3;
   const isRoomFullRef = useRef(false);
+  const roomTitleRef = useRef(roomTitle);
 
   console.log('useRoom hook called with:', { roomId, userId, userName, roomTitle });
+
+  // Keep room title updated without recreating callbacks
+  useEffect(() => {
+    roomTitleRef.current = roomTitle;
+  }, [roomTitle]);
 
   const initializeConnection = useCallback(() => {
     if (!roomId || !userId || !userName) {
@@ -60,7 +66,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       if (!hasJoinedRef.current) {
         console.log('useRoom: Joining room after connection');
         setTimeout(() => {
-          socketManager.joinRoom(roomId, userId, userName, roomTitle);
+          socketManager.joinRoom(roomId, userId, userName, roomTitleRef.current);
         }, 6100); // Match socketManager's reconnectDelay
         hasJoinedRef.current = true;
       }
@@ -156,7 +162,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         console.log(`useRoom: Retrying joinRoom (attempt ${retryCountRef.current + 1})`);
         retryCountRef.current += 1;
         setTimeout(() => {
-          socketManager.joinRoom(roomId, userId, userName, roomTitle);
+          socketManager.joinRoom(roomId, userId, userName, roomTitleRef.current);
         }, 6000); // Match reconnectDelay
       } else if (data.message === 'Room not found') {
         console.log('useRoom: Max retries reached or room not found, redirecting to /rooms');
@@ -164,7 +170,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
         hasJoinedRef.current = false;
       } else if (data.message === 'Not in a room' && socket.connected && !isRoomFullRef.current) {
         console.log('useRoom: Reattempting join due to Not in a room error');
-        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        socketManager.joinRoom(roomId, userId, userName, roomTitleRef.current);
       } else if (data.message === 'Room is full') {
         console.log('useRoom: Room is full, redirecting to /rooms');
         toast({
@@ -184,7 +190,13 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
     socket.on('roomUsers', onRoomUsers);
     socket.on('room full', () => {
       isRoomFullRef.current = true;
-      errorCleanup();
+      toast({
+        title: 'Room Full',
+        description: 'The room has reached its maximum capacity',
+        variant: 'destructive',
+      });
+      navigate('/rooms');
+      hasJoinedRef.current = false;
     });
 
     cleanupFunctionsRef.current = [
@@ -205,10 +217,10 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       console.log('useRoom: Initial socket connection detected, joining room');
       hasJoinedRef.current = true;
       setTimeout(() => {
-        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        socketManager.joinRoom(roomId, userId, userName, roomTitleRef.current);
       }, 6100); // Match socketManager's reconnectDelay
     }
-  }, [roomId, userId, userName, roomTitle, toast, navigate]);
+  }, [roomId, userId, userName, toast, navigate]);
 
   const sendMessage = useCallback(
     (message: string) => {
@@ -226,7 +238,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       // Ensure we're still in the room before sending
       if (users.length === 0 && socketManager.isConnected() && !isRoomFullRef.current) {
         console.warn('useRoom: No users in room, attempting to rejoin before sending message');
-        socketManager.joinRoom(roomId, userId, userName, roomTitle);
+        socketManager.joinRoom(roomId, userId, userName, roomTitleRef.current);
         toast({
           title: 'Rejoining Room',
           description: 'Reconnecting to room. Please try sending your message again.',
@@ -236,7 +248,7 @@ export const useRoom = (roomId: string, userId: string, userName: string, roomTi
       
       socketManager.sendMessage(message, userName);
     },
-    [userName, isConnected, toast, users.length, roomId, userId, roomTitle]
+    [userName, isConnected, toast, users.length, roomId, userId]
   );
 
   const kickUser = useCallback(

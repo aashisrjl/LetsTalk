@@ -60,10 +60,13 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     if (!localStreamRef.current) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Start with both tracks disabled (initially OFF)
+        stream.getVideoTracks().forEach((t) => (t.enabled = false));
+        stream.getAudioTracks().forEach((t) => (t.enabled = false));
         localStreamRef.current = stream;
         setLocalStream(stream);
-        setIsAudioEnabled(true);
-        setIsVideoEnabled(true);
+        setIsAudioEnabled(false);
+        setIsVideoEnabled(false);
         setStreamError(null);
         console.log('useWebRTC: Local stream initialized:', stream.id, 'Tracks:', {
           video: stream.getVideoTracks(),
@@ -86,8 +89,6 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
       } catch (error: any) {
         console.error('useWebRTC: Error accessing media devices:', error);
         setStreamError(error.message || 'Failed to access media devices');
-        setIsAudioEnabled(false);
-        setIsVideoEnabled(false);
         return null;
       }
     }
@@ -247,6 +248,9 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     } else {
       const stream = await initializeLocalStream();
       if (stream) {
+        // Enable the video track after initializing since we start disabled
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) videoTrack.enabled = true;
         setIsVideoEnabled(true);
         const socket = socketManager.getSocket();
         if (socket && socket.connected) {
@@ -278,6 +282,9 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     } else {
       const stream = await initializeLocalStream();
       if (stream) {
+        // Enable the audio track after initializing since we start disabled
+        const audioTrack = stream.getAudioTracks()[0];
+        if (audioTrack) audioTrack.enabled = true;
         setIsAudioEnabled(true);
         const socket = socketManager.getSocket();
         if (socket && socket.connected) {
@@ -344,7 +351,22 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
         }
         videoTrack.onended = () => {
           setIsScreenSharing(false);
-          initializeLocalStream();
+          (async () => {
+            const stream = await initializeLocalStream();
+            if (stream) {
+              const camVideoTrack = stream.getVideoTracks()[0];
+              if (camVideoTrack) camVideoTrack.enabled = true;
+              setIsVideoEnabled(true);
+              const s = socketManager.getSocket();
+              if (s && s.connected) {
+                s.emit('mediaStateChange', {
+                  userId,
+                  mediaType: 'video',
+                  isEnabled: true,
+                } as MediaStateChangeData);
+              }
+            }
+          })();
         };
       } catch (error) {
         console.error('useWebRTC: Error starting screen share:', error);
@@ -369,8 +391,7 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     }
 
     const initializeConnections = async () => {
-      const stream = await initializeLocalStream();
-      if (stream && socket.roomId === roomId) {
+      if (socket.roomId === roomId) {
         socket.emit('requestRoomUsers', { roomId }, () => {
           console.log('useWebRTC: Successfully requested room users');
         });
@@ -384,19 +405,38 @@ export const useWebRTC = (roomId: string, userId: string, isConnected: boolean) 
     const handleIceCandidateEvent = ({ fromUserId, toUserId, candidate, roomId: candidateRoomId }: IceCandidateData) =>
       toUserId === userId && candidateRoomId === roomId && handleIceCandidate(fromUserId, candidate);
     const handleUserConnected = ({ userId: newUserId, socketId }: { userId: string; socketId: string }) => {
-      if (newUserId !== userId && !otherUsers.current.has(newUserId)) {
+      if (newUserId === userId) return;
+      if (!otherUsers.current.has(newUserId)) {
         otherUsers.current.add(newUserId);
-        console.log('useWebRTC: User connected, creating offer for:', newUserId);
-        const peerConnection = peerConnections.current.get(newUserId);
-        if (peerConnection && peerConnection.iceConnectionState === 'completed') createOffer(newUserId);
+      }
+      console.log('useWebRTC: User connected, ensuring peer connection for:', newUserId);
+      const pc = createPeerConnection(newUserId);
+      if (pc.signalingState === 'stable') {
+        createOffer(newUserId);
       }
     };
     const handleRoomUsers = ({ users }: { users: { userId: string }[] }) => {
-      const newUsers = users.filter((u) => u.userId !== userId && !peerConnections.current.has(u.userId));
-      newUsers.forEach((u) => {
+      const remoteUsers = users.filter((u) => u.userId !== userId);
+      const remoteIds = new Set(remoteUsers.map((u) => u.userId));
+
+      // Create or refresh PCs for current remote users
+      remoteUsers.forEach((u) => {
         otherUsers.current.add(u.userId);
-        const peerConnection = peerConnections.current.get(u.userId);
-        if (peerConnection && peerConnection.iceConnectionState === 'completed') createOffer(u.userId);
+        const pc = createPeerConnection(u.userId);
+        if (pc.signalingState === 'stable') {
+          createOffer(u.userId);
+        }
+      });
+
+      // Cleanup PCs for users no longer in the room
+      Array.from(peerConnections.current.keys()).forEach((id) => {
+        if (id !== userId && !remoteIds.has(id)) {
+          const pc = peerConnections.current.get(id);
+          if (pc) pc.close();
+          peerConnections.current.delete(id);
+          setRemoteStreams((prev) => prev.filter((rs) => rs.userId !== id));
+          otherUsers.current.delete(id);
+        }
       });
     };
     const handleUserDisconnected = ({ userId: disconnectedUserId }: { userId: string }) => {

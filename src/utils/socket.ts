@@ -162,12 +162,18 @@ class SocketManager {
       const handleError = (data: any) => {
         this.lastJoinSuccess = false;
         clearJoining();
-        console.error('SocketManager: Join error:', data.message);
+        if (data && data.message) {
+          console.error('SocketManager: Join error:', data.message);
+        }
       };
 
       this.socket.once('roomUsers', handleRoomUsers);
       this.socket.once('error', handleError);
-      this.socket.once('room full', handleError);
+      this.socket.once('room full', () => {
+        this.lastJoinSuccess = false;
+        clearJoining();
+        console.warn('SocketManager: Join failed due to room full');
+      });
       setTimeout(clearJoining, 10000); // Fallback timeout
     } else {
       console.error('SocketManager: Cannot join room: Socket not connected');

@@ -9,8 +9,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { VideoGrid } from '@/components/VideoGrid';
 import { SidePanel } from '@/components/room/SidePanel';
 import { MediaControls } from '@/components/room/MediaControls';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -18,6 +19,18 @@ interface User {
   email?: string;
   photo?: string;
 }
+
+const Spinner = ({ label }: { label?: string }) => (
+  <div className="flex items-center justify-center h-screen text-slate-100">
+    <div className="flex flex-col items-center gap-4">
+      <div
+        className="h-12 w-12 rounded-full border-4 border-slate-700 border-t-sky-400 animate-spin"
+        aria-label="Loading"
+      />
+      {label && <span className="text-sm text-slate-300">{label}</span>}
+    </div>
+  </div>
+);
 
 const fetchRoomData = async (roomId: string) => {
   const response = await axios.get(`http://localhost:3000/rooms/${roomId}`, {
@@ -35,11 +48,7 @@ const Room = () => {
   const { user: userData, isLoading: authLoading, isAuthenticated } = useAuth();
 
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading...
-      </div>
-    );
+    return <Spinner label="Loading..." />;
   }
 
   if (!isAuthenticated || !userData?.id || !userData?.name) {
@@ -70,6 +79,7 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [hasInitialized, setHasInitialized] = useState(false);
+  const { toast } = useToast();
 
   const { data: roomData, isLoading: isRoomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
@@ -111,11 +121,7 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
   }, [hasInitialized, isRoomLoading, roomLoading, isConnected]);
 
   if (isRoomLoading || roomLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Loading room...
-      </div>
-    );
+    return <Spinner label="Loading room..." />;
   }
 
   if (roomError) {
@@ -125,11 +131,7 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
   }
 
   if (!isConnected && hasInitialized) {
-    return (
-      <div className="flex items-center justify-center h-screen text-slate-100">
-        Reconnecting to room...
-      </div>
-    );
+    return <Spinner label="Reconnecting to room..." />;
   }
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -146,6 +148,17 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
 
   const toggleSidePanel = () => {
     setIsSidePanelOpen(!isSidePanelOpen);
+  };
+
+  const handleCopyRoomLink = async () => {
+    const link = `${window.location.origin}/room/${roomId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Room link copied', description: 'Share it with others.' });
+    } catch (e) {
+      console.error('Failed to copy link:', e);
+      toast({ title: 'Copy failed', description: link, variant: 'destructive' });
+    }
   };
 
   return (
@@ -208,6 +221,16 @@ const RoomContent = ({ roomId, stableUserData, isAuthenticated }: {
           isConnected={isConnected}
           roomData={roomData}
         />
+      </div>
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          onClick={handleCopyRoomLink}
+          className="rounded-full shadow-lg px-4 py-6 gap-2"
+          aria-label="Copy room link"
+        >
+          <Copy className="h-5 w-5" />
+          <span className="hidden sm:inline">Copy room link</span>
+        </Button>
       </div>
       {isSidePanelOpen && (
         <div
